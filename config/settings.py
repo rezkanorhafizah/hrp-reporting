@@ -131,3 +131,9 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Tambahkan ini biar Django tau lokasi HTML kita
 TEMPLATES[0]['DIRS'] = [os.path.join(BASE_DIR, 'templates')]
+
+# Redirect setelah login berhasil (ke halaman dashboard utama)
+LOGIN_REDIRECT_URL = 'home' 
+
+# Redirect setelah logout (kembali ke halaman login)
+LOGOUT_REDIRECT_URL = 'login'

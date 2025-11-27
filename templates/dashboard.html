@@ -1,0 +1,138 @@
+{% extends 'base.html' %} {% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>📂 Dashboard Data HRP</h2>
+        <div>
+            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalImport">
+                📥 Import Excel
+            </button>
+            <a href="{% url 'tambah_peserta' %}" class="btn btn-primary">
+                ➕ Input Manual
+            </a>
+        </div>
+    </div>
+
+    <form method="get" class="card p-3 mb-4 shadow-sm">
+        <div class="row g-2">
+            <div class="col-md-3">
+                <select name="jenjang" class="form-select">
+                    <option value="">-- Semua Jenjang --</option>
+                    <option value="SD" {% if jenjang_selected == 'SD' %}selected{% endif %}>SD</option>
+                    <option value="SMP" {% if jenjang_selected == 'SMP' %}selected{% endif %}>SMP</option>
+                    <option value="SMA" {% if jenjang_selected == 'SMA' %}selected{% endif %}>SMA</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select name="sesi" class="form-select">
+                    <option value="">-- Semua Sesi --</option>
+                    <option value="IN1" {% if sesi_selected == 'IN1' %}selected{% endif %}>IN-1</option>
+                    <option value="ON" {% if sesi_selected == 'ON' %}selected{% endif %}>ON</option>
+                    <option value="IN2" {% if sesi_selected == 'IN2' %}selected{% endif %}>IN-2</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <input type="text" name="q" class="form-control" placeholder="Cari Nama Peserta..." value="{{ request.GET.q }}">
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-dark w-100">🔍 Filter</button>
+            </div>
+        </div>
+    </form>
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+                <table class="table table-bordered table-striped table-hover mb-0" style="font-size: 0.85rem;">
+                    <thead class="table-dark sticky-top">
+                        <tr>
+                            <th class="text-center" style="width: 100px; min-width: 100px;">Aksi</th>
+                            
+                            {% for header in table_headers %}
+                                <th style="min-width: 150px; white-space: nowrap;">
+                                    {{ header|title }} </th>
+                            {% empty %}
+                                <th>Data Peserta</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in table_rows %}
+                        <tr>
+                            <td class="text-center bg-light sticky-left">
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'edit_peserta' row.id %}" class="btn btn-warning" title="Edit">
+                                        <i class="fas fa-pencil-alt"></i>
+                                    </a>
+                                    <a href="{% url 'hapus_peserta' row.id %}" class="btn btn-danger" 
+                                       onclick="return confirm('Yakin hapus data ini?')" title="Hapus">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                </div>
+                            </td>
+
+                            {% for value in row.values %}
+                                <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                    {{ value }}
+                                </td>
+                            {% endfor %}
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="100%" class="text-center py-5 text-muted">
+                                <i class="fas fa-folder-open fa-3x mb-3"></i><br>
+                                Belum ada data. Silakan <strong>Import Excel</strong> terlebih dahulu.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card-footer text-muted small">
+            <i class="fas fa-info-circle me-1"></i> 
+            Menampilkan kolom sesuai dengan file Excel asli yang diupload.
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalImport" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="{% url 'import_excel' %}" method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">Import Data Excel</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label>File Excel</label>
+                        <input type="file" name="file_excel" class="form-control" required>
+                    </div>
+                    <div class="row">
+                        <div class="col">
+                            <select name="jenjang" class="form-select" required>
+                                <option value="">Pilih Jenjang...</option>
+                                <option value="SD">SD</option>
+                                <option value="SMP">SMP</option>
+                                <option value="SMA">SMA</option>
+                            </select>
+                        </div>
+                        <div class="col">
+                            <select name="sesi" class="form-select" required>
+                                <option value="">Pilih Sesi...</option>
+                                <option value="IN1">IN-1</option>
+                                <option value="ON">ON</option>
+                                <option value="IN2">IN-2</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-success">Mulai Import</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

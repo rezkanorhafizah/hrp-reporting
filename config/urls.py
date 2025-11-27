@@ -16,11 +16,17 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from reporting import views  # Import views kita
+from reporting import views
+from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', views.index, name='home'), # Halaman utama
+
+    # URL untuk Login/Logout bawaan Django
+    path('accounts/', include('django.contrib.auth.urls')),
+
+    path('', include('reporting.urls')),
 
     # URL Download
     path('download/pdf-table/', views.download_pdf_table, name='download_pdf_table'),
