@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>HRP Reporting System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="container py-5">
+
+    <h1 class="mb-4">📊 Aplikasi Pelaporan HRP Barito Kuala</h1>
+
+    <div class="card p-4 shadow-sm">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label class="form-label">Upload File Excel (KKA)</label>
+                <input type="file" name="file_excel" class="form-control" required>
+            </div>
+            <button type="submit" class="btn btn-primary">🚀 Upload & Proses</button>
+        </form>
+    </div>
+
+    {% if sukses %}
+    <div class="alert alert-success mt-4">
+        <h4>✅ Berhasil!</h4>
+        <p>Total Data: <strong>{{ total_baris }}</strong> Peserta</p>
+        <p>Kolom Terdeteksi: {{ kolom_terdeteksi }}</p>
+    </div>
+
+    <div class="mt-4">
+        <h5>Preview Data (5 Baris Pertama):</h5>
+        <div class="table-responsive">
+            {{ preview_html|safe }}
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card h-100 border-primary">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">1. Demografi & Sebaran</h5>
+            </div>
+            <div class="card-body">
+                <p class="card-text text-muted">Rekap data peserta dalam bentuk tabel.</p>
+                
+                <div class="d-grid gap-2">
+                    <a href="{% url 'download_pdf_table' %}" class="btn btn-outline-danger">
+                        📄 Download PDF (Tabel)
+                    </a>
+                    <a href="{% url 'download_excel' %}" class="btn btn-outline-success">
+                        📊 Download Excel
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card h-100 border-info">
+            <div class="card-header bg-info text-white">
+                <h5 class="card-title mb-0">4. Kinerja Trainer</h5>
+            </div>
+            <div class="card-body">
+                <p class="card-text text-muted">Analisis skor rata-rata untuk setiap fasilitator/trainer.</p>
+                <a href="{% url 'download_report_trainer' %}" class="btn btn-outline-info w-100">
+                    📥 Download PDF Trainer
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card h-100 border-warning">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="card-title mb-0">5. Temuan Kualitatif</h5>
+            </div>
+            <div class="card-body">
+                <p class="card-text text-muted">Rekap saran, masukan, dan komentar esai dari peserta.</p>
+                <a href="{% url 'download_report_qualitative' %}" class="btn btn-outline-warning w-100">
+                    📥 Download PDF Saran
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card h-100 border-secondary">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="card-title mb-0">2. Materi & Implementasi</h5>
+            </div>
+            <div class="card-body">
+                <p class="card-text text-muted">Evaluasi manfaat materi dan rencana penerapan di sekolah.</p>
+                <a href="{% url 'download_report_materi' %}" class="btn btn-outline-secondary w-100">
+                    📥 Download PDF Materi
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card h-100 border-success">
+            <div class="card-header bg-success text-white">
+                <h5 class="card-title mb-0">3. Kepuasan Umum</h5>
+            </div>
+            <div class="card-body">
+                <p class="card-text text-muted">Statistik kepuasan terhadap fasilitas, panitia, dll.</p>
+                <a href="{% url 'download_report_kepuasan' %}" class="btn btn-outline-success w-100">
+                    📥 Download PDF Kepuasan
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+</body>
+</html>
+
