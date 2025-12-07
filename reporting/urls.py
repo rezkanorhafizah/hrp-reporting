@@ -5,7 +5,6 @@ urlpatterns = [
     # Halaman Utama (Dashboard)
     path('', views.index, name='home'),
 
-    path('tambah/', views.tambah_peserta, name='tambah_peserta'),
     path('import/', views.import_excel, name='import_excel'),
     path('edit/<int:id>/', views.edit_peserta, name='edit_peserta'),
     path('hapus/<int:id>/', views.hapus_peserta, name='hapus_peserta'),

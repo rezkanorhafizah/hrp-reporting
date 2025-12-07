@@ -20,8 +20,9 @@ def proses_dataframe(file_path, target_sheet=None):
     xls = None
     try:
         xls = pd.ExcelFile(file_path)
+        print(f"📂 File dimuat. Daftar Sheet: {xls.sheet_names}")
+
         df = None
-        
         # 1. Cari Sheet
         if target_sheet and target_sheet in xls.sheet_names:
             df = pd.read_excel(file_path, sheet_name=target_sheet)
@@ -40,6 +41,7 @@ def proses_dataframe(file_path, target_sheet=None):
         new_cols = {}
         found_targets = []
         
+        # Mapping Identitas
         keyword_map = {
             'nama lengkap': 'nama', 'nama peserta': 'nama',
             'asal instansi': 'sekolah', 'asal sekolah': 'sekolah', 'instansi': 'sekolah',
@@ -49,20 +51,32 @@ def proses_dataframe(file_path, target_sheet=None):
             'terapkan segera': 'rencana_implementasi', 'ingin bapak ibu terapkan': 'rencana_implementasi'
         }
 
-        # Mapping Instrumen (Untuk Trainer & Materi)
+        # Mapping 14 Instrumen (Keyword Super Lengkap)
         instrumen_keys = {
-            'relevan': ['relevan'], 'struktur': ['struktur'], 'konsep': ['konsep'],
-            'waktu': ['waktu', 'dialokasikan'], 'penguasaan': ['penguasaan'],
-            'menjawab': ['menjawab'], 'metode': ['metode'], 'contoh': ['contoh'],
-            'umpan_balik': ['umpan balik'], 'komunikasi': ['komunikasi'],
-            'lingkungan': ['lingkungan'], 'antusias': ['antusias'],
-            'responsif': ['responsif'], 'perhatian': ['perhatian']
+            'relevan': ['relevan', 'kebutuhan'],
+            'struktur': ['struktur', 'alur'],
+            'konsep': ['menjelaskan konsep', 'kompleks'],
+            'waktu': ['waktu', 'dialokasikan'],
+            'penguasaan': ['penguasaan', 'mendalam'],
+            'menjawab': ['menjawab', 'jawaban'],
+            'metode': ['metode', 'interaktif'],
+            'contoh': ['contoh', 'praktis'],
+            'umpan_balik': ['umpan balik', 'feedback'],
+            'komunikasi': ['komunikasi', 'jelas', 'penyampaian'],
+            'lingkungan': ['lingkungan', 'kondusif', 'suasana'],
+            'antusias': ['antusias', 'semangat'],
+            'responsif': ['responsif', 'kesulitan'],
+            'perhatian': ['perhatian', 'kepada semua']
         }
         
+        # Debug Counter
+        count_t1 = 0
+        count_t2 = 0
+
         for col in df.columns:
             col_str = str(col).lower().strip()
             
-            # A. Identitas
+            # A. Cek Identitas
             matched = False
             for key, val in keyword_map.items():
                 if key in col_str and val not in found_targets:
@@ -72,23 +86,39 @@ def proses_dataframe(file_path, target_sheet=None):
                     break
             if matched: continue 
 
-            # B. Trainer 1 & 2
+            # B. CEK TRAINER (LOGIKA SUPER SENSITIF)
             kode_trainer = None
-            if 'trainer1' in col_str or 'trainer 1' in col_str: kode_trainer = "T1"
-            elif 'trainer2' in col_str or 'trainer 2' in col_str: kode_trainer = "T2"
             
+            # Regex mencari: kata 'trainer' ATAU 'tr', diikuti spasi/karakter lain, lalu angka 1 atau 2
+            # Menangkap: "Trainer 1", "Trainer1", "Tr 1", "Fasilitator 1", dll.
+            if re.search(r'(trainer|tr|fasilitator).*1', col_str):
+                kode_trainer = "T1"
+            elif re.search(r'(trainer|tr|fasilitator).*2', col_str):
+                kode_trainer = "T2"
+            
+            # Jika Regex gagal, coba cek manual stringnya
+            if not kode_trainer:
+                if 'trainer 1' in col_str or 'trainer1' in col_str: kode_trainer = "T1"
+                elif 'trainer 2' in col_str or 'trainer2' in col_str: kode_trainer = "T2"
+
             if kode_trainer:
+                # Cari Instrumen
                 for kode_inst, keywords in instrumen_keys.items():
                     if any(k in col_str for k in keywords):
                         new_cols[col] = f"Train_{kode_trainer}_{kode_inst}"
+                        
+                        # Hitung buat laporan debug
+                        if kode_trainer == "T1": count_t1 += 1
+                        else: count_t2 += 1
                         break
 
+        print(f"📊 REPORT MAPPING: Ditemukan {count_t1} kolom Trainer 1 dan {count_t2} kolom Trainer 2.")
+        
         df_clean = df.rename(columns=new_cols)
         df_clean = df_clean.loc[:, ~df_clean.columns.duplicated()]
 
         # Bersihkan Angka
         for col in df_clean.columns:
-            # Skor Kepuasan atau Kolom Trainer
             if str(col) == 'skor_kepuasan' or str(col).startswith('Train_'):
                 df_clean[col] = pd.to_numeric(df_clean[col], errors='coerce')
         
@@ -232,98 +262,102 @@ def index(request):
     return render(request, 'dashboard.html', context)
 
 @login_required
-def tambah_peserta(request):
-    if request.method == 'POST':
-        form = PesertaForm(request.POST)
-        if form.is_valid():
-            p = form.save(commit=False)
-            # Inisialisasi JSON kosong
-            p.data_trainer = {
-                'nama': p.nama, 'sekolah': p.sekolah, 
-                'saran_masukan': p.saran_masukan
-            }
-            p.save()
-            messages.success(request, "Data tersimpan.")
-            return redirect('home')
-    else: form = PesertaForm()
-    return render(request, 'form_peserta.html', {'form': form, 'title': 'Tambah Peserta'})
-
-@login_required
 def edit_peserta(request, id):
-    peserta = get_object_or_404(Peserta, id=id)
+    p = get_object_or_404(Peserta, id=id)
     
     # 1. Ambil Data JSON
-    raw_data = peserta.data_trainer
-    if isinstance(raw_data, str):
-        try: raw_data = json.loads(raw_data)
-        except: raw_data = {}
-    
-    if not isinstance(raw_data, dict): raw_data = {}
+    json_data = p.data_trainer
+    if isinstance(json_data, str):
+        try: json_data = json.loads(json_data)
+        except: json_data = {}
+    if not isinstance(json_data, dict): json_data = {}
 
-    # 2. Grouping Data untuk Tampilan (Biar Rapi per Trainer)
-    # Format: { 'T1': [ {'key': 'Train_T1_relevan', 'label': 'relevan', 'val': 5} ], ... }
-    grouped_data = {}
+    # 2. Definisikan Field Utama (Yang sudah ada di Form Django)
+    # Field ini TIDAK perlu ditampilkan lagi di bagian bawah
+    form_fields = ['nama', 'sekolah', 'kecamatan', 'skor_kepuasan', 'saran_masukan', 'rencana_implementasi']
     
-    for key, val in raw_data.items():
-        # Cek apakah ini kunci nilai trainer? (Format: Train_Nama_Instrumen)
+    # 3. PISAHKAN DATA (Grouping Logic)
+    trainer_groups = {} # Untuk menampung skor trainer
+    general_fields = [] # Untuk data sisa (materi, dll)
+
+    # Urutkan keys biar rapi
+    all_keys = sorted(json_data.keys())
+
+    for key in all_keys:
+        if key in form_fields: 
+            continue # Skip field utama
+            
+        val = json_data[key]
+        
+        # Cek apakah ini data Trainer? (Format: Train_Nama_Instrumen)
         if str(key).startswith("Train_"):
             parts = key.split('_')
+            # Train_T1_relevan -> parts[1] = T1 (Nama Trainer)
             if len(parts) >= 3:
-                trainer_name = parts[1] # Misal: T1
-                instrumen = "_".join(parts[2:]) # Misal: relevan
+                trainer_name = parts[1]
+                # Ambil sisa string sebagai label instrumen
+                instrumen_label = " ".join(parts[2:]).replace('_', ' ').title()
                 
-                if trainer_name not in grouped_data:
-                    grouped_data[trainer_name] = []
+                if trainer_name not in trainer_groups:
+                    trainer_groups[trainer_name] = []
                 
-                grouped_data[trainer_name].append({
-                    'key': key,         # Nama input HTML (penting buat save)
-                    'label': instrumen, # Label tampilan
-                    'value': val        # Nilai sekarang
+                trainer_groups[trainer_name].append({
+                    'key': key,         # Nama asli untuk input name
+                    'label': instrumen_label, # Nama cantik untuk label
+                    'value': val
                 })
-    
-    # Sort biar urutan trainer dan instrumen rapi
-    for t in grouped_data:
-        grouped_data[t] = sorted(grouped_data[t], key=lambda x: x['label'])
-    
-    # Urutkan nama trainer
-    sorted_grouped_data = dict(sorted(grouped_data.items()))
+        else:
+            # Masuk ke data umum (misal: skor materi)
+            label_cantik = key.replace('_', ' ').title()
+            general_fields.append({
+                'key': key,
+                'label': label_cantik,
+                'value': val
+            })
 
+    # Sort Trainer Groups biar T1, T2 urut
+    trainer_groups = dict(sorted(trainer_groups.items()))
+
+    # --- LOGIC SIMPAN (POST) ---
     if request.method == 'POST':
-        form = PesertaForm(request.POST, instance=peserta)
+        form = PesertaForm(request.POST, instance=p)
         if form.is_valid():
-            p = form.save(commit=False)
+            obj = form.save(commit=False)
             
-            # 3. Simpan Perubahan JSON
-            # Kita copy data lama, lalu update dengan input dari form
-            data_baru = raw_data.copy()
+            # Update data inti ke JSON
+            json_data['nama'] = obj.nama
+            json_data['sekolah'] = obj.sekolah
+            json_data['kecamatan'] = obj.kecamatan
+            json_data['skor_kepuasan'] = obj.skor_kepuasan
+            json_data['saran_masukan'] = obj.saran_masukan
+            json_data['rencana_implementasi'] = obj.rencana_implementasi
             
-            # Update field inti
-            data_baru['nama'] = p.nama
-            data_baru['sekolah'] = p.sekolah
-            data_baru['skor_kepuasan'] = p.skor_kepuasan
-            
-            # Update Nilai Trainer dari Input Form
-            for key in request.POST:
-                if key.startswith("Train_"):
-                    # Ambil nilai, pastikan angka
+            # Update data dinamis dari Input HTML
+            # Kita loop ulang semua keys yang ada di JSON awal
+            for key in json_data.keys():
+                # Cari input dengan name="dynamic_<key>"
+                input_name = f"dynamic_{key}"
+                if input_name in request.POST:
+                    new_val = request.POST[input_name]
+                    # Coba pertahankan tipe data angka
                     try:
-                        val = int(request.POST[key])
+                        if "." in new_val: json_data[key] = float(new_val)
+                        else: json_data[key] = int(new_val)
                     except:
-                        val = request.POST[key] # Kalau bukan angka simpan string
-                    
-                    data_baru[key] = val
+                        json_data[key] = new_val
             
-            p.data_trainer = data_baru
-            p.save()
-            messages.success(request, "Data berhasil diperbarui.")
+            obj.data_trainer = json_data
+            obj.save()
+            messages.success(request, "Data berhasil diperbarui!")
             return redirect('home')
     else:
-        form = PesertaForm(instance=peserta)
+        form = PesertaForm(instance=p)
 
     context = {
         'form': form, 
-        'title': 'Edit Data & Penilaian (JSON Mode)',
-        'grouped_data': sorted_grouped_data # Kirim data yang sudah digroup
+        'title': 'Edit Data Lengkap',
+        'trainer_groups': trainer_groups, # Data Trainer Terpisah
+        'general_fields': general_fields  # Data Umum Terpisah
     }
     return render(request, 'form_peserta.html', context)
 
