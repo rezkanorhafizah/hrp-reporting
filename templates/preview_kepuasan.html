@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid pb-5">
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="text-dark fw-bold"><i class="fas fa-smile me-2"></i> Laporan 3: Kepuasan Peserta</h3>
+        
+        <a href="{% url 'download_report_kepuasan' %}?{{ query_params }}" class="btn btn-danger btn-lg shadow-sm">
+            <i class="fas fa-file-pdf me-2"></i> Export ke PDF (Resmi)
+        </a>
+    </div>
+
+    <div class="card shadow-sm mb-4 border-0">
+        <div class="card-body bg-light">
+            <form method="GET" action="" class="row g-3 align-items-center">
+                <div class="col-md-5">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white"><i class="fas fa-search"></i></span>
+                        <input type="text" name="q" class="form-control" placeholder="Cari Nama Peserta..." value="{{ search_query }}">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">Filter</button>
+                </div>
+                <div class="col-md-1">
+                    <a href="{% url 'view_kepuasan' %}" class="btn btn-outline-secondary w-100"><i class="fas fa-sync-alt"></i></a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover mb-0 align-middle">
+                    <thead class="text-white text-center" style="background-color: #28a745;">
+                        <tr>
+                            <th width="5%">No</th>
+                            <th class="text-start">Aspek Penilaian</th>
+                            <th width="15%">Total Resp.</th>
+                            <th width="15%">Skor 4 & 5</th>
+                            <th width="15%">Kepuasan</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in data_stats %}
+                        <tr>
+                            <td class="text-center fw-bold">{{ forloop.counter }}</td>
+                            <td class="fw-bold">{{ row.aspek }}</td>
+                            <td class="text-center">{{ row.tot }}</td>
+                            <td class="text-center">{{ row.puas }}</td>
+                            <td class="text-center fw-bold {% if row.pct >= 90 %}text-success{% elif row.pct >= 80 %}text-primary{% else %}text-danger{% endif %}">
+                                {{ row.pct|floatformat:1 }}%
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center py-4">Data tidak ditemukan.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card-footer bg-white border-top-0">
+            <small class="text-muted fst-italic">* Persentase Kepuasan dihitung dari jumlah responden yang memberikan skor 4 (Puas) dan 5 (Sangat Puas).</small>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

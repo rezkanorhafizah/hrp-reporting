@@ -203,67 +203,117 @@ def generate_materi_pdf(df):
 
 # --- LAPORAN 3: KEPUASAN ---
 def generate_kepuasan_pdf(df):
+    # 1. Setup PDF & Halaman
     pdf = PDFReport(orientation='P', unit='mm', format='A4')
-    pdf.set_auto_page_break(False)
+    pdf.set_auto_page_break(False) # Kita kontrol halaman manual agar tabel tidak putus
     pdf.alias_nb_pages()
     pdf.add_page()
-    pdf.set_font("Arial", "B", 14); pdf.cell(0, 10, "Laporan 3: Tingkat Kepuasan Peserta (Top 2 Box)", 0, 1, 'L'); pdf.ln(5)
 
+    # Judul Laporan
+    pdf.set_font("Arial", "B", 14)
+    pdf.cell(0, 10, "Laporan 3: Tingkat Kepuasan Peserta (Top 2 Box)", 0, 1, 'L')
+    pdf.ln(5)
+
+    # 2. Filter Kolom Kepuasan
     puas_cols = [c for c in df.columns if 'puas' in str(c).lower() and pd.api.types.is_numeric_dtype(df[c])]
-    if not puas_cols: pdf.cell(0, 10, "Data kosong.", 0, 1); return get_pdf_bytes(pdf)
+    
+    if not puas_cols: 
+        pdf.set_font("Arial", "I", 12)
+        pdf.cell(0, 10, "Data kepuasan tidak ditemukan atau kosong.", 0, 1)
+        return get_pdf_bytes(pdf)
 
+    # 3. Hitung Statistik
     stats = []
     for col in puas_cols:
         tot = df[col].count()
         puas = df[col][df[col] >= 4].count()
         pct = (puas / tot) * 100 if tot > 0 else 0
+        
+        # Bersihkan nama aspek
         nm = clean_text(col)
-        for t in ["Seberapa puas Anda dengan ", "?", "pelayanan ", "keseluruhan "]: nm = nm.replace(t, "")
+        for t in ["Seberapa puas Anda dengan ", "?", "pelayanan ", "keseluruhan "]: 
+            nm = nm.replace(t, "")
+        
         stats.append({'aspek': nm.strip().title(), 'tot': tot, 'puas': puas, 'pct': pct})
+    
+    # Urutkan dari yang kepuasannya tertinggi
     stats.sort(key=lambda x: x['pct'], reverse=True)
 
-    def head_l3():
+    # 4. Definisi Fungsi Header Tabel (Agar bisa dipanggil ulang saat ganti halaman)
+    def print_header():
         pdf.set_font("Arial", "B", 10)
-        pdf.set_fill_color(40, 167, 69); pdf.set_text_color(255)
+        # Warna Header (Hijau)
+        pdf.set_fill_color(40, 167, 69)
+        pdf.set_text_color(255, 255, 255) # Teks Putih
+        
+        # Header Cells dengan Border=1 (Kotak Penuh)
         pdf.cell(10, 10, "No", 1, 0, 'C', True)
         pdf.cell(90, 10, "Aspek Penilaian", 1, 0, 'L', True)
         pdf.cell(30, 10, "Total Resp.", 1, 0, 'C', True)
         pdf.cell(30, 10, "Skor 4 & 5", 1, 0, 'C', True)
         pdf.cell(30, 10, "Kepuasan", 1, 1, 'C', True)
         pdf.ln()
+        
+        # Reset Warna untuk Baris Data (Penting!)
+        pdf.set_text_color(0, 0, 0) 
+        pdf.set_font("Arial", size=10)
 
+    # Cetak Header Pertama Kali
+    # Cek ruang dulu, kalau mepet bawah langsung pindah halaman sebelum mulai tabel
     if pdf.get_y() > 240: pdf.add_page()
-    head_l3()
+    print_header()
     
+    # 5. Cetak Baris Data
     no = 1
     for item in stats:
-        if pdf.get_y() > 250: pdf.add_page(); head_l3()
-        reset_font(pdf, 10)
-        if no % 2 == 0: pdf.set_fill_color(235, 250, 235)
-        else: pdf.set_fill_color(255, 255, 255)
+        # Cek Halaman (Batas Aman 250mm)
+        if pdf.get_y() > 250: 
+            pdf.add_page()
+            print_header() # Cetak header lagi di halaman baru
+
+        # Zebra Striping (Warna selang-seling)
+        if no % 2 == 0: 
+            pdf.set_fill_color(235, 250, 235) # Hijau Muda Pucat
+        else: 
+            pdf.set_fill_color(255, 255, 255) # Putih
         
+        # Cetak Sel dengan Border=1 (Agar menyatu jadi satu tabel)
         pdf.cell(10, 8, str(no), 1, 0, 'C', True)
         pdf.cell(90, 8, item['aspek'], 1, 0, 'L', True)
         pdf.cell(30, 8, str(item['tot']), 1, 0, 'C', True)
         pdf.cell(30, 8, str(item['puas']), 1, 0, 'C', True)
+        
+        # Kolom Persentase (Bold)
         pdf.set_font("Arial", "B", 10)
         pdf.cell(30, 8, f"{item['pct']:.1f}%", 1, 1, 'C', True)
+        
+        # Reset Font Normal
+        pdf.set_font("Arial", "", 10)
         pdf.ln()
         no += 1
+    
+    # Footer Keterangan
+    if pdf.get_y() > 260: pdf.add_page()
+    pdf.ln(3)
+    pdf.set_font("Arial", "I", 8)
+    pdf.multi_cell(0, 5, "* Persentase Kepuasan dihitung dari jumlah responden yang memberikan skor 4 (Puas) dan 5 (Sangat Puas).")
+
     return get_pdf_bytes(pdf)
 
 # --- LAPORAN 4: TRAINER ---
 def generate_trainer_pdf(df):
+    # 1. SETUP PDF LANDSCAPE
     pdf = PDFReport(orientation='L', unit='mm', format='A4')
     pdf.set_auto_page_break(False)
     pdf.alias_nb_pages()
     pdf.add_page()
 
+    # Judul
     pdf.set_font("Arial", "B", 14)
-    pdf.cell(0, 10, "Laporan 4: Perbandingan Kinerja Trainer (Persentase Kepuasan)", 0, 1, 'L')
+    pdf.cell(0, 10, "Laporan 4: Perbandingan Kinerja Trainer", 0, 1, 'L')
     pdf.ln(2)
 
-    # 1. Instrumen
+    # 2. DEFINISI INSTRUMEN
     instrumen_list = [
         ("relevan", "Materi pelatihan relevan dengan kebutuhan pembelajaran."),
         ("struktur", "Struktur materi mudah dipahami dan alur logis."),
@@ -281,167 +331,294 @@ def generate_trainer_pdf(df):
         ("perhatian", "Memberikan perhatian yang cukup kepada semua peserta.")
     ]
 
-    # 2. Paksa Tampil T1 dan T2
+    # Kita bandingkan T1 dan T2
     t_list = ["T1", "T2"]
 
+    # Lebar Kolom
     w_no, w_inst, w_t1, w_t2 = 10, 130, 65, 65
-    
+
+    # 3. HEADER TABEL (BIRU)
     def head_l4():
-        pdf.set_fill_color(52, 152, 219); pdf.set_text_color(255); pdf.set_font("Arial", 'B', 10)
+        pdf.set_font("Arial", "B", 10)
+        # Warna Biru (RGB: 52, 152, 219) - Mirip gambar
+        pdf.set_fill_color(52, 152, 219) 
+        pdf.set_text_color(255) # Putih
+        
+        # Border = 1 (Full Grid)
         pdf.cell(w_no, 10, "No", 1, 0, 'C', True)
         pdf.cell(w_inst, 10, "Instrumen Penilaian", 1, 0, 'C', True)
         pdf.cell(w_t1, 10, "Trainer 1", 1, 0, 'C', True)
         pdf.cell(w_t2, 10, "Trainer 2", 1, 0, 'C', True)
         pdf.ln()
+        
+        pdf.set_text_color(0) # Reset Hitam
 
     if pdf.get_y() > 165: pdf.add_page()
     head_l4()
     
+    # 4. ISI DATA
     no = 1
-    # Limit Halaman Landscape
+    # Limit Landscape (175mm)
     LIMIT_Y = 175
 
     for k, txt in instrumen_list:
+        # Hitung tinggi baris (MultiCell Instrumen)
+        nl = (len(txt) // 80) + 1
+        h = max(8, nl * 6)
+        
         # Cek Halaman
-        nl = (len(txt)//80)+1; h = max(8, nl*6)
-        if pdf.get_y() + h > LIMIT_Y: pdf.add_page(); head_l4()
+        if pdf.get_y() + h > LIMIT_Y: 
+            pdf.add_page()
+            head_l4()
 
-        reset_font(pdf)
-        if no % 2 == 0: pdf.set_fill_color(240, 248, 255)
-        else: pdf.set_fill_color(255)
+        pdf.set_font("Arial", "", 10)
+        
+        # Zebra Striping
+        if no % 2 == 0: pdf.set_fill_color(240, 248, 255) # Biru Pudar
+        else: pdf.set_fill_color(255, 255, 255)
 
         y = pdf.get_y()
-        # Cetak Kiri (Instrumen)
-        pdf.set_xy(10+w_no, y)
-        pdf.multi_cell(w_inst, 6, txt, border=0, align='L', fill=False)
-        h_act = pdf.get_y() - y
-        if h_act < 8: h_act = 8
 
-        # Background & Border
-        pdf.set_xy(10, y); pdf.rect(10, y, 270, h_act, 'F')
-        pdf.set_xy(10+w_no, y); pdf.multi_cell(w_inst, 6, txt, border=0, align='L', fill=False)
-        pdf.set_xy(10, y); pdf.cell(w_no, h_act, str(no), 0, 0, 'C')
-        
-        # Cetak Skor T1 & T2
-        x = 10+w_no+w_inst
+        # A. Kolom No
+        pdf.set_xy(10, y)
+        pdf.cell(w_no, h, str(no), 1, 0, 'C', True) # Pakai Fill True biar zebra jalan
+
+        # B. Kolom Instrumen (MultiCell)
+        pdf.set_xy(10 + w_no, y)
+        # Trik: Gambar kotak background dulu
+        pdf.rect(10 + w_no, y, w_inst, h, 'F') 
+        pdf.multi_cell(w_inst, 6, txt, border=0, align='L') # Teks di atasnya
+        # Gambar border kotak
+        pdf.rect(10 + w_no, y, w_inst, h) 
+
+        # C. Kolom Skor Trainer 1 & 2
+        x = 10 + w_no + w_inst
         for t in t_list:
             col = f"Train_{t}_{k}"
             val = "-"
             
-            # --- CEK DATA ---
             if col in df.columns:
-                # Paksa konversi ke angka (jaga-jaga kalau masih string)
+                # PAKSA KONVERSI ANGKA
                 s = pd.to_numeric(df[col], errors='coerce')
                 tot = s.count()
-                top = s[s>=4].count()
+                top = s[s >= 4].count()
                 if tot > 0: val = f"{int((top/tot)*100)}%"
             
             pdf.set_xy(x, y)
-            if val != "-" and val != "0%" and int(val.replace('%','')) < 75: 
-                pdf.set_text_color(220, 53, 69)
-            else: 
-                pdf.set_text_color(0)
-            
-            pdf.cell(w_t1, h_act, val, 0, 0, 'C')
+            pdf.cell(w_t1, h, val, 1, 0, 'C', True) # Border 1
             x += w_t1
         
-        pdf.set_y(y + h_act)
+        pdf.ln()
+        # Pastikan Y turun sejauh h (karena multicell bisa kacau)
+        pdf.set_y(y + h)
         no += 1
+        
     return get_pdf_bytes(pdf)
 
 # --- LAPORAN 5: KUALITATIF (FIXED VARIABEL w_komen) ---
 def generate_qualitative_pdf(df):
+    # 1. SETUP PDF LANDSCAPE
     pdf = PDFReport(orientation='L', unit='mm', format='A4')
     pdf.set_auto_page_break(False)
     pdf.alias_nb_pages()
     
+    # 2. CARI KOLOM
     keywords = ['saran', 'masukan', 'ceritakan', 'pesan', 'komentar', 'apresiasi']
     text_cols = []
     for col in df.columns:
-        if 'nama' in str(col).lower() or 'instansi' in str(col).lower(): continue
+        # Hindari kolom identitas
+        if 'nama' in str(col).lower() or 'instansi' in str(col).lower() or 'sekolah' in str(col).lower(): continue
         if any(k in str(col).lower() for k in keywords): text_cols.append(col)
     
-    selected = text_cols[:5]
-    if not selected: 
-        pdf.add_page(); pdf.cell(0, 10, "Data kualitatif tidak ditemukan.", 0, 1)
+    # Ambil 5 kolom pertama
+    selected_cols = text_cols[:5]
+    
+    if not selected_cols:
+        pdf.add_page()
+        pdf.set_font("Arial", "I", 12)
+        pdf.cell(0, 10, "Data kualitatif tidak ditemukan.", 0, 1)
         return get_pdf_bytes(pdf)
 
-    # Definisi Lebar Kolom
-    w_no, w_nm, w_sc, w_cm = 10, 50, 60, 155
+    # 3. SETTING LEBAR KOLOM
+    w_no = 10
+    w_nm = 50
+    w_sc = 60
+    w_komen = 155 # Sisa lebar kertas landscape
 
-    def head_l5():
-        pdf.set_fill_color(255, 193, 7); pdf.set_text_color(0); pdf.set_font("Arial", 'B', 10)
+    # Header Tabel (Warna Kuning/Amber)
+    def header_tabel():
+        pdf.set_font("Arial", "B", 10)
+        pdf.set_fill_color(255, 193, 7) # Amber
+        pdf.set_text_color(0) # Hitam
+        
         pdf.cell(w_no, 10, "No", 1, 0, 'C', True)
         pdf.cell(w_nm, 10, "Nama Peserta", 1, 0, 'C', True)
         pdf.cell(w_sc, 10, "Asal Sekolah", 1, 0, 'C', True)
-        pdf.cell(w_cm, 10, "Komentar / Masukan", 1, 0, 'C', True)
+        pdf.cell(w_komen, 10, "Komentar / Masukan", 1, 0, 'C', True)
         pdf.ln()
 
     col_nm = next((c for c in df.columns if 'nama' in str(c).lower()), df.columns[0])
     col_sc = next((c for c in df.columns if 'sekolah' in str(c).lower() or 'instansi' in str(c).lower()), None)
 
-    for topic in selected:
+    # 4. LOOPING PER TOPIK (Setiap Topik Halaman Baru)
+    for topic in selected_cols:
         pdf.add_page()
-        pdf.set_font("Arial", "B", 14); pdf.cell(0, 10, "Laporan 5: Temuan Kualitatif", 0, 1, 'L')
-        pdf.set_font("Arial", "B", 11); pdf.set_text_color(52, 58, 64)
         
+        # Judul Topik
+        pdf.set_font("Arial", "B", 14)
+        pdf.cell(0, 10, "Laporan 5: Temuan Kualitatif", 0, 1, 'L')
+        
+        # Sub-Judul (Nama Pertanyaan)
+        pdf.set_font("Arial", "I", 11)
+        pdf.set_text_color(52, 58, 64)
         clean_j = clean_text(topic).replace("Ceritakan ", "").replace("Tuliskan ", "")
-        pdf.multi_cell(0, 6, f"Topik: {clean_j[:120]}...", 0, 'L'); pdf.ln(4)
+        pdf.multi_cell(0, 6, f"Topik: {clean_j[:120]}...", 0, 'L')
+        pdf.ln(4)
 
-        if pdf.get_y() > 165: pdf.add_page()
-        head_l5()
+        header_tabel()
         
         no = 1
+        pdf.set_font("Arial", "", 10)
+        pdf.set_text_color(0)
+
+        # Loop Baris Data
         for index, row in df.iterrows():
             txt = clean_text(row.get(topic, '-')).strip()
             
-            # Filter komentar pendek/kosong
-            if len(txt) > 3 and txt.lower() not in ['-', 'tidak ada', 'nihil', 'aman', 'cukup']:
+            # Filter yang kosong/pendek
+            if len(txt) > 3 and txt.lower() not in ['-', 'tidak ada', 'nihil', 'aman']:
                 
-                # --- RUMUS BARU (LEBIH BOROS BIAR AMAN) ---
-                # 1. Estimasi karakter per baris (Turunkan jadi 65 biar gak kepotong)
+                # --- LOGIKA ANTI-POTONG (Updated) ---
+                # 1. Estimasi karakter per baris (65 char)
                 chars_per_line = 65 
                 num_lines = (len(txt) // chars_per_line) + 1
                 
                 # 2. Hitung Tinggi: (Jml Baris * 5mm) + 4mm Padding
                 h_row = (num_lines * 5) + 4
-                
-                # Minimal tinggi 8mm
-                h_row = max(8, h_row)
+                h_row = max(8, h_row) # Minimal 8mm
 
-                # --- CEK HALAMAN ---
+                # Cek Halaman (Limit 175mm untuk Landscape)
                 if pdf.get_y() + h_row > 175:
                     pdf.add_page()
-                    head_l5()
+                    header_tabel()
+                    pdf.set_font("Arial", "", 10)
 
-                reset_font(pdf)
-                
-                x, y = pdf.get_x(), pdf.get_y()
-                
-                # Cetak Kolom Identitas (Vertically Align Middle secara kasar)
+                # Posisi Awal
+                x_start = pdf.get_x()
+                y_start = pdf.get_y()
+
+                # Cetak No, Nama, Sekolah
                 pdf.cell(w_no, h_row, str(no), 1, 0, 'C')
                 
-                # Gunakan MultiCell untuk Nama & Sekolah juga (jaga-jaga kalau panjang)
-                # Simpan X Y sebelum cetak nama
-                x_nama = x + w_no
-                pdf.set_xy(x_nama, y)
-                pdf.multi_cell(w_nm, h_row, clean_text(row[col_nm])[:28], border=1, align='L')
-                # Paksa posisi Y tidak turun (karena cell biasa gak wrap) - Trik visual:
-                pdf.set_xy(x_nama + w_nm, y) # Pindah ke sebelah nama
+                # Nama (MultiCell biar aman kalau panjang)
+                pdf.set_xy(x_start + w_no, y_start)
+                pdf.multi_cell(w_nm, h_row, clean_text(row[col_nm])[:30], border=1, align='L')
+                # Trik visual: timpa border biar tingginya sama
+                pdf.set_xy(x_start + w_no, y_start); pdf.rect(x_start + w_no, y_start, w_nm, h_row)
                 
-                # Cetak Sekolah
+                # Sekolah
+                pdf.set_xy(x_start + w_no + w_nm, y_start)
                 pdf.cell(w_sc, h_row, clean_text(row.get(col_sc, '-'))[:35], 1, 0, 'L')
 
-                # Cetak Komentar (MultiCell)
-                # Tambah padding atas sedikit (y+2)
-                pdf.set_xy(x + w_no + w_nm + w_sc, y + 2)
-                pdf.multi_cell(w_cm, 5, txt, border=0, align='L') # Border 0 dulu
+                # Komentar (MultiCell + Padding)
+                pdf.set_xy(x_start + w_no + w_nm + w_sc, y_start + 2) # Turun 2mm
+                pdf.multi_cell(w_komen, 5, txt, border=0, align='L')
                 
-                # Gambar Kotak Border Manual (Biar rapi membungkus teks)
-                pdf.set_xy(x + w_no + w_nm + w_sc, y)
-                pdf.rect(x + w_no + w_nm + w_sc, y, w_cm, h_row)
+                # Gambar Kotak Border Manual
+                pdf.set_xy(x_start + w_no + w_nm + w_sc, y_start)
+                pdf.rect(x_start + w_no + w_nm + w_sc, y_start, w_komen, h_row)
 
-                # Pindah baris
-                pdf.set_xy(x, y + h_row)
+                # Pindah Baris
+                pdf.set_xy(x_start, y_start + h_row)
                 no += 1
+
+    return get_pdf_bytes(pdf)
+
+def generate_kepuasan_pdf(df):
+    # 1. SETUP PDF PORTRAIT
+    pdf = PDFReport(orientation='P', unit='mm', format='A4')
+    pdf.set_auto_page_break(False) # Kontrol manual biar rapi
+    pdf.alias_nb_pages()
+    pdf.add_page()
+
+    # Judul
+    pdf.set_font("Arial", "B", 14)
+    pdf.cell(0, 10, "Laporan 3: Tingkat Kepuasan Peserta (Top 2 Box)", 0, 1, 'L')
+    pdf.ln(5)
+
+    # 2. HITUNG DATA (Sama kayak di Views)
+    puas_cols = [c for c in df.columns if 'puas' in str(c).lower() and pd.api.types.is_numeric_dtype(df[c])]
+    
+    if not puas_cols: 
+        pdf.cell(0, 10, "Data tidak ditemukan.", 0, 1)
+        return get_pdf_bytes(pdf)
+
+    stats = []
+    for col in puas_cols:
+        tot = df[col].count()
+        puas = df[col][df[col] >= 4].count()
+        pct = (puas / tot) * 100 if tot > 0 else 0
+        nm = clean_text(col)
+        for t in ["Seberapa puas Anda dengan ", "?", "pelayanan ", "keseluruhan "]: nm = nm.replace(t, "")
+        stats.append({'aspek': nm.strip().title(), 'tot': tot, 'puas': puas, 'pct': pct})
+    
+    stats.sort(key=lambda x: x['pct'], reverse=True)
+
+    # 3. SETTING TABEL (Gaya Hijau & Grid Penuh)
+    
+    def header_tabel():
+        pdf.set_font("Arial", "B", 10)
+        # Warna Hijau (RGB: 40, 167, 69)
+        pdf.set_fill_color(40, 167, 69) 
+        pdf.set_text_color(255) # Putih
+        
+        # Header Cells dengan Border=1 (Kotak Penuh)
+        pdf.cell(10, 10, "No", 1, 0, 'C', True)
+        pdf.cell(90, 10, "Aspek Penilaian", 1, 0, 'L', True)
+        pdf.cell(30, 10, "Total Resp.", 1, 0, 'C', True)
+        pdf.cell(30, 10, "Skor 4 & 5", 1, 0, 'C', True)
+        pdf.cell(30, 10, "Kepuasan", 1, 1, 'C', True)
+        pdf.ln()
+        
+        # Reset Warna
+        pdf.set_text_color(0)
+
+    # Cetak Header
+    if pdf.get_y() > 240: pdf.add_page()
+    header_tabel()
+    
+    # 4. ISI DATA
+    no = 1
+    pdf.set_font("Arial", "", 10)
+    
+    for item in stats:
+        # Cek Halaman (Hard Limit 250mm)
+        if pdf.get_y() > 250:
+            pdf.add_page()
+            header_tabel()
+            pdf.set_font("Arial", "", 10)
+
+        # Zebra Striping
+        if no % 2 == 0: pdf.set_fill_color(235, 250, 235) # Hijau Pudar
+        else: pdf.set_fill_color(255, 255, 255) # Putih
+        
+        # Cetak Cell dengan Border=1 (Kotak Penuh)
+        pdf.cell(10, 8, str(no), 1, 0, 'C', True)
+        pdf.cell(90, 8, item['aspek'], 1, 0, 'L', True)
+        pdf.cell(30, 8, str(item['tot']), 1, 0, 'C', True)
+        pdf.cell(30, 8, str(item['puas']), 1, 0, 'C', True)
+        
+        # Persentase Bold
+        pdf.set_font("Arial", "B", 10)
+        pdf.cell(30, 8, f"{item['pct']:.1f}%", 1, 1, 'C', True)
+        
+        pdf.set_font("Arial", "", 10)
+        pdf.ln()
+        no += 1
+
+    # Footer Note
+    pdf.ln(5)
+    pdf.set_font("Arial", "I", 8)
+    pdf.multi_cell(0, 5, "* Persentase Kepuasan dihitung dari jumlah responden yang memberikan skor 4 (Puas) dan 5 (Sangat Puas).")
+
     return get_pdf_bytes(pdf)

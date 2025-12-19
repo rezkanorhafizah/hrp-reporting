@@ -88,24 +88,24 @@
 
                 <div class="sidebar-label">Export Laporan (PDF)</div>
                 
-                <a href="{% url 'download_pdf_table' %}" class="list-group-item list-group-item-action">
-                    <i class="fas fa-users me-2 text-info"></i> 1. Demografi
+                <a href="{% url 'view_demografi' %}" class="list-group-item list-group-item-action bg-transparent text-light">
+                    <i class="fas fa-users me-2"></i> 1. Demografi
                 </a>
                 
-                <a href="{% url 'download_report_materi' %}" class="list-group-item list-group-item-action">
-                    <i class="fas fa-book-open me-2 text-warning"></i> 2. Materi & Implementasi
+                <a href="{% url 'view_materi' %}" class="list-group-item list-group-item-action bg-transparent text-light">
+                    <i class="fas fa-book me-2"></i> 2. Materi & Implementasi
                 </a>
                 
-                <a href="{% url 'download_report_kepuasan' %}" class="list-group-item list-group-item-action">
-                    <i class="fas fa-smile me-2 text-success"></i> 3. Kepuasan Umum
+                <a href="{% url 'view_kepuasan' %}" class="list-group-item list-group-item-action bg-transparent text-light">
+                    <i class="fas fa-smile me-2"></i> 3. Kepuasan Umum
+                </a>
+
+                <a href="{% url 'view_trainer' %}" class="list-group-item list-group-item-action bg-transparent text-light">
+                    <i class="fas fa-chalkboard-teacher me-2"></i> 4. Kinerja Trainer
                 </a>
                 
-                <a href="{% url 'download_report_trainer' %}" class="list-group-item list-group-item-action">
-                    <i class="fas fa-chalkboard-teacher me-2 text-danger"></i> 4. Kinerja Trainer
-                </a>
-                
-                <a href="{% url 'download_report_qualitative' %}" class="list-group-item list-group-item-action">
-                    <i class="fas fa-comments me-2 text-primary"></i> 5. Kualitatif & Saran
+                <a href="{% url 'view_kualitatif' %}" class="list-group-item list-group-item-action bg-transparent text-light">
+                    <i class="fas fa-comments me-2"></i> 5. Kualitatif & Saran
                 </a>
 
                 <div class="sidebar-divider"></div>
