@@ -1,5 +1,7 @@
 from django.urls import path
 from . import views
+from django.conf import settings             # <--- Tambah ini
+from django.conf.urls.static import static
 
 urlpatterns = [
     # Halaman Utama (Dashboard)
@@ -51,4 +53,10 @@ urlpatterns = [
 
     # HTML Print View (Untuk Laporan 3 & 4)
     path('report/print/<str:tipe>/', views.report_html_view, name='report_print'),
+
+    
 ]
+
+# --- TAMBAHKAN KODE AJAIB INI ---
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

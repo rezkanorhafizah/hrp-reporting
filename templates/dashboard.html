@@ -1,71 +1,145 @@
-{% extends 'base.html' %} {% block content %}
-<div class="container py-4">
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid p-0">
+
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>📂 Dashboard Data HRP</h2>
         <div>
-            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalImport">
-                📥 Import Excel
-            </button>
+            <h3 class="fw-bold text-dark mb-1">Dashboard Data</h3>
+            <p class="text-muted mb-0">Kelola dan pantau data peserta pelatihan HAFECS.</p>
+        </div>
+        <a href="{% url 'import_excel' %}" class="btn btn-success shadow-sm px-4 py-2 rounded-pill">
+            <i class="fas fa-file-import me-2"></i> Import Data Excel
+        </a>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card p-3 h-100 border-start border-4 border-primary">
+                <div class="d-flex align-items-center">
+                    <div class="bg-primary bg-opacity-10 p-3 rounded-circle text-primary me-3">
+                        <i class="fas fa-users fa-2x"></i>
+                    </div>
+                    <div>
+                        <div class="text-muted small fw-bold text-uppercase">Total Peserta</div>
+                        <h2 class="mb-0 fw-bold text-dark">{{ page_obj.paginator.count }}</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card p-3 h-100 border-start border-4 border-warning">
+                <div class="d-flex align-items-center">
+                    <div class="bg-warning bg-opacity-10 p-3 rounded-circle text-warning me-3">
+                        <i class="fas fa-map-marker-alt fa-2x"></i>
+                    </div>
+                    <div>
+                        <div class="text-muted small fw-bold text-uppercase">Filter Wilayah</div>
+                        <div class="fw-bold text-dark">
+                            {% if kecamatan_selected %}
+                                {{ kecamatan_selected }}
+                            {% else %}
+                                Semua Kecamatan
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card p-3 h-100 border-start border-4 border-success">
+                <div class="d-flex align-items-center">
+                    <div class="bg-success bg-opacity-10 p-3 rounded-circle text-success me-3">
+                        <i class="fas fa-check-circle fa-2x"></i>
+                    </div>
+                    <div>
+                        <div class="text-muted small fw-bold text-uppercase">Status Sistem</div>
+                        <h5 class="mb-0 fw-bold text-success">Siap Cetak PDF</h5>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <form method="get" class="card p-3 mb-4 shadow-sm">
-        <div class="row g-2">
-            <div class="col-md-10">
-                <input type="text" name="q" class="form-control" placeholder="Cari Nama Peserta..." value="{{ request.GET.q }}">
-            </div>
-            <div class="col-md-2">
-                <button type="submit" class="btn btn-dark w-100">🔍 Cari</button>
-            </div>
-        </div>
-    </form>
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" action="" class="row g-3 align-items-center">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
+                        <input type="text" name="q" class="form-control border-start-0 ps-0" placeholder="Cari Nama Peserta..." value="{{ query }}">
+                    </div>
+                </div>
 
-    <div class="card shadow-sm">
-        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">📋 Data Peserta (Sesuai Excel)</h5>
-            <span class="badge bg-warning text-dark">Total: {{ total_data }} Baris</span>
+                <div class="col-md-4">
+                    <select name="kecamatan" class="form-select">
+                        <option value="">-- Semua Kecamatan --</option>
+                        {% for k in list_kecamatan %}
+                            <option value="{{ k }}" {% if k == kecamatan_selected %}selected{% endif %}>{{ k }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-2 d-grid gap-2 d-md-flex">
+                    <button type="submit" class="btn btn-primary flex-grow-1">Filter</button>
+                    <a href="{% url 'home' %}" class="btn btn-light border" title="Reset"><i class="fas fa-sync-alt"></i></a>
+                </div>
+            </form>
         </div>
-        
+    </div>
+
+    <div class="card">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 fw-bold text-primary"><i class="fas fa-table me-2"></i>Data Peserta Terbaru</h6>
+            <span class="badge bg-secondary rounded-pill">Hal {{ page_obj.number }} dari {{ page_obj.paginator.num_pages }}</span>
+        </div>
         <div class="card-body p-0">
-            <div class="table-responsive" style="max-height: 650px; overflow-y: auto;">
-                <table class="table table-bordered table-striped table-hover mb-0" style="font-size: 12px; min-width: 2000px;">
-                    <thead class="table-light sticky-top" style="top: 0; z-index: 10;">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
                         <tr>
-                            <th class="text-center bg-secondary text-white" style="width: 100px; position: sticky; left: 0; z-index: 20;">
-                                Aksi
-                            </th>
-                            
-                            {% for header in table_headers %}
-                                <th style="min-width: 150px; vertical-align: middle;">
-                                    {{ header }}
-                                </th>
-                            {% empty %}
-                                <th>Data Belum Tersedia</th>
-                            {% endfor %}
+                            <th class="ps-4 rounded-start">Nama Peserta</th>
+                            <th>Asal Sekolah</th>
+                            <th>Kecamatan</th>
+                            <th class="text-center">Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for row in table_rows %}
+                        {% for p in page_obj %}
                         <tr>
-                            <td class="text-center bg-light" style="position: sticky; left: 0; z-index: 5;">
-                                <div class="btn-group btn-group-sm">
-                                    <a href="{% url 'edit_peserta' row.id %}" class="btn btn-warning" title="Edit">✏️</a>
-                                    <a href="{% url 'hapus_peserta' row.id %}" class="btn btn-danger" 
-                                       onclick="return confirm('Yakin hapus?')" title="Hapus">🗑️</a>
+                            <td class="ps-4 fw-bold text-dark">
+                                <div class="d-flex align-items-center">
+                                    <div class="rounded-circle bg-light text-primary d-flex justify-content-center align-items-center me-3" style="width: 40px; height: 40px; font-weight: bold;">
+                                        {{ p.nama|slice:":1" }}
+                                    </div>
+                                    {{ p.nama }}
                                 </div>
                             </td>
-
-                            {% for value in row.values %}
-                                <td style="max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ value }}">
-                                    {{ value }}
-                                </td>
-                            {% endfor %}
+                            <td class="text-muted">{{ p.sekolah }}</td>
+                            <td>
+                                {% if p.kecamatan %}
+                                    <span class="badge bg-info bg-opacity-10 text-info border border-info rounded-pill px-3">{{ p.kecamatan }}</span>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <a href="{% url 'edit_peserta' p.id %}" class="btn btn-sm btn-outline-warning mx-1" title="Edit">
+                                    <i class="fas fa-pen"></i>
+                                </i>
+                                <a href="{% url 'hapus_peserta' p.id %}" class="btn btn-sm btn-outline-danger mx-1" title="Hapus" onclick="return confirm('Yakin hapus data ini?')">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                            </td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="100%" class="text-center py-5 text-muted">
-                                <i class="fas fa-folder-open fa-3x mb-3"></i><br>
-                                Belum ada data. Silakan Import Excel terlebih dahulu.
+                            <td colspan="4" class="text-center py-5 text-muted">
+                                <img src="https://cdn-icons-png.flaticon.com/512/7486/7486754.png" width="80" class="mb-3 opacity-50">
+                                <p class="mb-0">Belum ada data peserta.</p>
+                                <small>Silakan import data Excel terlebih dahulu.</small>
                             </td>
                         </tr>
                         {% endfor %}
@@ -73,32 +147,29 @@
                 </table>
             </div>
         </div>
-    </div>
-</div>
 
-<div class="modal fade" id="modalImport" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form action="{% url 'import_excel' %}" method="post" enctype="multipart/form-data">
-                {% csrf_token %}
-                <div class="modal-header">
-                    <h5 class="modal-title">Import Data Excel</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label>File Excel (Format KKA)</label>
-                        <input type="file" name="file_excel" class="form-control" required>
-                    </div>
-                    <div class="alert alert-info small">
-                        Sistem akan otomatis mendeteksi sheet yang berisi data.
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="submit" class="btn btn-success">Mulai Import</button>
-                </div>
-            </form>
+        <div class="card-footer bg-white py-3">
+            <nav>
+                <ul class="pagination justify-content-center mb-0">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link rounded-pill px-3 me-1" href="?page={{ page_obj.previous_page_number }}&q={{ query }}&kecamatan={{ kecamatan_selected }}">Prev</a>
+                    </li>
+                    {% endif %}
+
+                    <li class="page-item disabled">
+                        <span class="page-link border-0">Hal {{ page_obj.number }}</span>
+                    </li>
+
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link rounded-pill px-3 ms-1" href="?page={{ page_obj.next_page_number }}&q={{ query }}&kecamatan={{ kecamatan_selected }}">Next</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
         </div>
     </div>
+
 </div>
 {% endblock %}
