@@ -1,81 +1,119 @@
 {% extends 'base.html' %}
 
 {% block content %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <div class="container-fluid">
-    
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h3 class="text-dark fw-bold"><i class="fas fa-users me-2"></i> Laporan 1: Demografi Peserta</h3>
-        
-        <a href="{% url 'download_demografi' %}?{{ query_params }}" class="btn btn-danger btn-lg shadow-sm">
-            <i class="fas fa-file-pdf me-2"></i> Export ke PDF
+        <div>
+            <h3 class="fw-bold mb-1 text-dark">{{ title }}</h3>
+            <p class="text-muted mb-0">Visualisasi sebaran peserta berdasarkan wilayah dan instansi.</p>
+        </div>
+        <a href="{% url 'download_demografi' %}?{{ query_params }}" target="_blank" class="btn btn-danger rounded-pill px-4 shadow-sm">
+            <i class="fas fa-file-pdf me-2"></i>Download PDF
         </a>
     </div>
 
-    <div class="card shadow-sm mb-4 border-0">
-        <div class="card-body bg-light">
-            <form method="GET" action="" class="row g-3 align-items-center">
-                
-                <div class="col-md-4">
-                    <div class="input-group">
-                        <span class="input-group-text bg-white"><i class="fas fa-search"></i></span>
-                        <input type="text" name="q" class="form-control" placeholder="Cari Nama / Sekolah..." value="{{ search_query }}">
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100 py-2 border-start border-4 border-primary">
+                <div class="card-body d-flex align-items-center">
+                    <div class="bg-primary bg-opacity-10 p-3 rounded-circle text-primary me-3">
+                        <i class="fas fa-users fa-2x"></i>
+                    </div>
+                    <div>
+                        <div class="text-muted small fw-bold text-uppercase">Total Peserta</div>
+                        <h2 class="mb-0 fw-bold">{{ stats.total_peserta }}</h2>
                     </div>
                 </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100 py-2 border-start border-4 border-success">
+                <div class="card-body d-flex align-items-center">
+                    <div class="bg-success bg-opacity-10 p-3 rounded-circle text-success me-3">
+                        <i class="fas fa-school fa-2x"></i>
+                    </div>
+                    <div>
+                        <div class="text-muted small fw-bold text-uppercase">Total Instansi</div>
+                        <h2 class="mb-0 fw-bold">{{ stats.total_sekolah }}</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-                <div class="col-md-3">
-                    <select name="kecamatan" class="form-select">
-                        <option value="">-- Semua Kecamatan --</option>
-                        <option value="Banjarmasin Utara" {% if kecamatan_selected == 'Banjarmasin Utara' %}selected{% endif %}>Banjarmasin Utara</option>
-                        <option value="Banjarmasin Selatan" {% if kecamatan_selected == 'Banjarmasin Selatan' %}selected{% endif %}>Banjarmasin Selatan</option>
-                        </select>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100 py-2 border-start border-4 border-warning">
+                <div class="card-body d-flex align-items-center">
+                    <div class="bg-warning bg-opacity-10 p-3 rounded-circle text-warning me-3">
+                        <i class="fas fa-map-marked-alt fa-2x"></i>
+                    </div>
+                    <div>
+                        <div class="text-muted small fw-bold text-uppercase">Total Kecamatan</div>
+                        <h2 class="mb-0 fw-bold">{{ stats.total_kecamatan }}</h2>
+                    </div>
                 </div>
-
-                <div class="col-md-2">
-                    <button type="submit" class="btn btn-primary w-100">
-                        <i class="fas fa-filter me-1"></i> Terapkan
-                    </button>
-                </div>
-                
-                <div class="col-md-1">
-                    <a href="{% url 'view_demografi' %}" class="btn btn-outline-secondary w-100" title="Reset Filter">
-                        <i class="fas fa-sync-alt"></i>
-                    </a>
-                </div>
-            </form>
+            </div>
         </div>
     </div>
 
-    <div class="card shadow border-0">
-        <div class="card-header bg-primary text-white">
-            <h6 class="mb-0"><i class="fas fa-table me-2"></i>Data Peserta Terfilter: {{ data_tabel|length }} Orang</h6>
+    <div class="row mb-4">
+        <div class="col-lg-8 mb-4 mb-lg-0">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white py-3">
+                    <h6 class="m-0 fw-bold text-dark"><i class="fas fa-chart-bar me-2 text-primary"></i>Top 10 Sekolah Terbanyak</h6>
+                </div>
+                <div class="card-body">
+                    <canvas id="chartSekolah" height="250"></canvas> </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white py-3">
+                    <h6 class="m-0 fw-bold text-dark"><i class="fas fa-chart-pie me-2 text-warning"></i>Sebaran Wilayah</h6>
+                </div>
+                <div class="card-body d-flex align-items-center justify-content-center">
+                    <div style="width: 100%; max-width: 300px;">
+                        <canvas id="chartKecamatan"></canvas> </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-white py-3">
+            <h6 class="m-0 fw-bold text-dark"><i class="fas fa-table me-2"></i>Rincian Data Peserta</h6>
         </div>
         <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-striped table-hover mb-0">
-                    <thead class="table-light">
+            <div class="table-responsive" style="max-height: 500px;">
+                <table class="table table-striped table-hover mb-0 align-middle">
+                    <thead class="table-dark sticky-top">
                         <tr>
-                            <th class="text-center" width="5%">No</th>
-                            <th width="30%">Nama Peserta</th>
-                            <th width="35%">Asal Sekolah</th>
-                            <th width="30%">Kecamatan</th>
+                            <th class="text-center" width="50">No</th>
+                            <th>Nama Peserta</th>
+                            <th>Asal Sekolah / Instansi</th>
+                            <th>Kecamatan</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for row in data_tabel %}
+                        {% for row in data_list %}
                         <tr>
                             <td class="text-center">{{ forloop.counter }}</td>
-                            <td class="fw-bold text-dark">{{ row.nama }}</td>
+                            <td class="fw-bold">{{ row.nama }}</td>
                             <td>{{ row.sekolah }}</td>
                             <td>
-                                <span class="badge bg-info text-dark">{{ row.kecamatan }}</span>
+                                {% if row.kecamatan %}
+                                    <span class="badge bg-info bg-opacity-10 text-dark border border-info px-3 rounded-pill">{{ row.kecamatan }}</span>
+                                {% else %}
+                                    -
+                                {% endif %}
                             </td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="4" class="text-center py-5 text-muted">
-                                <i class="fas fa-search fa-3x mb-3"></i><br>
-                                Data tidak ditemukan. Coba reset filter atau import data baru.
-                            </td>
+                            <td colspan="4" class="text-center py-4 text-muted">Data tidak ditemukan.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -83,6 +121,66 @@
             </div>
         </div>
     </div>
-
 </div>
+
+<script>
+    // 1. Data dari Python (Views.py)
+    const sekolahLabels = {{ stats.sekolah_labels|safe }};
+    const sekolahData = {{ stats.sekolah_data|safe }};
+    const kecLabels = {{ stats.kec_labels|safe }};
+    const kecData = {{ stats.kec_data|safe }};
+
+    // 2. Grafik Bar Sekolah
+    const ctxSekolah = document.getElementById('chartSekolah').getContext('2d');
+    new Chart(ctxSekolah, {
+        type: 'bar', // Grafik Batang
+        data: {
+            labels: sekolahLabels,
+            datasets: [{
+                label: 'Jumlah Peserta',
+                data: sekolahData,
+                backgroundColor: 'rgba(54, 162, 235, 0.7)', // Biru
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1,
+                borderRadius: 5
+            }]
+        },
+        options: {
+            indexAxis: 'y', // Biar horizontal (karena nama sekolah panjang)
+            responsive: true,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                x: { beginAtZero: true }
+            }
+        }
+    });
+
+    // 3. Grafik Donut Kecamatan
+    const ctxKec = document.getElementById('chartKecamatan').getContext('2d');
+    new Chart(ctxKec, {
+        type: 'doughnut', // Grafik Donat
+        data: {
+            labels: kecLabels,
+            datasets: [{
+                data: kecData,
+                backgroundColor: [
+                    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', 
+                    '#FF9F40', '#E7E9ED', '#71B37C', '#E67E22', '#34495E'
+                ],
+                hoverOffset: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { 
+                    position: 'bottom',
+                    labels: { boxWidth: 10, font: { size: 10 } }
+                }
+            }
+        }
+    });
+</script>
 {% endblock %}

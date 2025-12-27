@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid p-0">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold text-dark mb-1">Import Data Excel</h3>
+            <p class="text-muted mb-0">Upload file Excel (.xlsx) data peserta pelatihan.</p>
+        </div>
+        <a href="{% url 'home' %}" class="btn btn-outline-secondary rounded-pill px-4">
+            <i class="fas fa-arrow-left me-2"></i> Kembali
+        </a>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-body p-5 text-center">
+                    
+                    <div class="mb-4">
+                        <div class="bg-success bg-opacity-10 text-success rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 80px; height: 80px;">
+                            <i class="fas fa-file-excel fa-3x"></i>
+                        </div>
+                    </div>
+
+                    <h4 class="fw-bold text-dark">Upload File Excel</h4>
+                    <p class="text-muted">Pilih file dari komputer Anda untuk memperbarui database.</p>
+
+                    <form method="post" enctype="multipart/form-data" class="mt-4">
+                        {% csrf_token %}
+                        
+                        <div class="mb-4">
+                            <input class="form-control form-control-lg border-2" type="file" name="myfile" accept=".xlsx, .xls" required>
+                            <div class="form-text mt-2 text-muted fst-italic">
+                                * Pastikan format header Excel sesuai (Nama, Sekolah, Kecamatan, dll).
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-success btn-lg rounded-pill shadow-sm">
+                                <i class="fas fa-cloud-upload-alt me-2"></i> PROSES IMPORT DATA
+                            </button>
+                        </div>
+                    </form>
+
+                </div>
+            </div>
+            
+            {% if messages %}
+            <div class="mt-4">
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm border-0" role="alert">
+                    {% if message.tags == 'success' %}
+                        <i class="fas fa-check-circle me-2"></i>
+                    {% else %}
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                    {% endif %}
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+        </div>
+    </div>
+
+</div>
+{% endblock %}

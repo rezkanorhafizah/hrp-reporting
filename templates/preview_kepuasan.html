@@ -1,72 +1,76 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="container-fluid pb-5">
-    
+<div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h3 class="text-dark fw-bold"><i class="fas fa-smile me-2"></i> Laporan 3: Kepuasan Peserta</h3>
-        
-        <a href="{% url 'download_report_kepuasan' %}?{{ query_params }}" class="btn btn-danger btn-lg shadow-sm">
-            <i class="fas fa-file-pdf me-2"></i> Export ke PDF (Resmi)
+        <h3 class="fw-bold mb-0">{{ title }}</h3>
+        <a href="{% url 'download_report_kepuasan' %}?{{ query_params }}" target="_blank" class="btn btn-danger rounded-pill px-4 shadow-sm">
+            <i class="fas fa-file-pdf me-2"></i>Download PDF
         </a>
     </div>
 
-    <div class="card shadow-sm mb-4 border-0">
-        <div class="card-body bg-light">
-            <form method="GET" action="" class="row g-3 align-items-center">
-                <div class="col-md-5">
-                    <div class="input-group">
-                        <span class="input-group-text bg-white"><i class="fas fa-search"></i></span>
-                        <input type="text" name="q" class="form-control" placeholder="Cari Nama Peserta..." value="{{ search_query }}">
-                    </div>
-                </div>
-                <div class="col-md-2">
-                    <button type="submit" class="btn btn-primary w-100">Filter</button>
-                </div>
-                <div class="col-md-1">
-                    <a href="{% url 'view_kepuasan' %}" class="btn btn-outline-secondary w-100"><i class="fas fa-sync-alt"></i></a>
-                </div>
-            </form>
+    <div class="alert alert-success border-0 shadow-sm d-flex align-items-center mb-4">
+        <i class="fas fa-check-circle fa-2x me-3"></i>
+        <div>
+            <h6 class="fw-bold mb-0">Metode Top 2 Box</h6>
+            <small>Persentase dihitung dari jumlah responden yang memberikan skor <strong>4 (Puas)</strong> dan <strong>5 (Sangat Puas)</strong>.</small>
         </div>
     </div>
 
-    <div class="card shadow border-0">
+    <div class="card shadow-sm border-0">
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-bordered table-hover mb-0 align-middle">
-                    <thead class="text-white text-center" style="background-color: #28a745;">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-success text-white">
                         <tr>
-                            <th width="5%">No</th>
-                            <th class="text-start">Aspek Penilaian</th>
-                            <th width="15%">Total Resp.</th>
-                            <th width="15%">Skor 4 & 5</th>
-                            <th width="15%">Kepuasan</th>
+                            <th class="text-center" width="50">No</th>
+                            <th>Aspek Penilaian</th>
+                            <th class="text-center" width="200">Total Responden</th>
+                            <th class="text-center" width="150">Skor 4 & 5</th>
+                            <th width="300">Tingkat Kepuasan (%)</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for row in data_stats %}
                         <tr>
                             <td class="text-center fw-bold">{{ forloop.counter }}</td>
-                            <td class="fw-bold">{{ row.aspek }}</td>
+                            <td class="fw-bold text-dark">{{ row.aspek }}</td>
                             <td class="text-center">{{ row.tot }}</td>
                             <td class="text-center">{{ row.puas }}</td>
-                            <td class="text-center fw-bold {% if row.pct >= 90 %}text-success{% elif row.pct >= 80 %}text-primary{% else %}text-danger{% endif %}">
-                                {{ row.pct|floatformat:1 }}%
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="progress flex-grow-1 me-3" style="height: 20px;">
+                                        <div class="progress-bar 
+                                            {% if row.pct >= 90 %}bg-success
+                                            {% elif row.pct >= 75 %}bg-info
+                                            {% elif row.pct >= 60 %}bg-warning
+                                            {% else %}bg-danger{% endif %}" 
+                                            role="progressbar" 
+                                            style="width: {{ row.pct }}%">
+                                        </div>
+                                    </div>
+                                    <span class="fw-bold 
+                                        {% if row.pct >= 90 %}text-success
+                                        {% elif row.pct >= 75 %}text-info
+                                        {% elif row.pct >= 60 %}text-warning
+                                        {% else %}text-danger{% endif %}">
+                                        {{ row.pct }}%
+                                    </span>
+                                </div>
                             </td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="5" class="text-center py-4">Data tidak ditemukan.</td>
+                            <td colspan="5" class="text-center py-5 text-muted">
+                                <i class="fas fa-chart-bar fa-3x mb-3 opacity-25"></i>
+                                <p>Data kepuasan tidak ditemukan. Pastikan Import Excel sudah benar.</p>
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
         </div>
-        <div class="card-footer bg-white border-top-0">
-            <small class="text-muted fst-italic">* Persentase Kepuasan dihitung dari jumlah responden yang memberikan skor 4 (Puas) dan 5 (Sangat Puas).</small>
-        </div>
     </div>
-
 </div>
 {% endblock %}

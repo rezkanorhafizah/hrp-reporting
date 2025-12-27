@@ -4,16 +4,13 @@ from .models import Peserta
 class PesertaForm(forms.ModelForm):
     class Meta:
         model = Peserta
-        fields = [
-            'nama', 'sekolah', 'kecamatan', 
-            'skor_kepuasan', 'saran_masukan', 'rencana_implementasi'
-        ]
+        fields = '__all__' # Otomatis ambil semua kolom baru dari models.py
         
+        # Kita percantik inputan utama saja, sisanya biarkan default
         widgets = {
-            'nama': forms.TextInput(attrs={'class': 'form-control'}),
-            'sekolah': forms.TextInput(attrs={'class': 'form-control'}),
-            'kecamatan': forms.TextInput(attrs={'class': 'form-control'}),
-            'skor_kepuasan': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.1', 'max': 5}),
-            'saran_masukan': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'rencana_implementasi': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'nama': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nama Lengkap'}),
+            'sekolah': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Asal Sekolah/Instansi'}),
+            'kecamatan': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Kecamatan'}),
+            
+            # Sisanya biarkan Django yang atur, atau tambahkan manual jika perlu
         }

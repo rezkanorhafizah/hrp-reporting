@@ -90,58 +90,42 @@
         </div>
     </div>
 
-    <div class="card">
+    <div class="card shadow-sm border-0">
         <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-            <h6 class="m-0 fw-bold text-primary"><i class="fas fa-table me-2"></i>Data Peserta Terbaru</h6>
+            <h6 class="m-0 fw-bold text-primary"><i class="fas fa-table me-2"></i>Data Peserta Lengkap</h6>
             <span class="badge bg-secondary rounded-pill">Hal {{ page_obj.number }} dari {{ page_obj.paginator.num_pages }}</span>
         </div>
+        
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead>
+                <table class="table table-bordered table-hover align-middle mb-0 text-nowrap" style="font-size: 0.85rem;">
+                    <thead class="table-light">
                         <tr>
-                            <th class="ps-4 rounded-start">Nama Peserta</th>
-                            <th>Asal Sekolah</th>
-                            <th>Kecamatan</th>
-                            <th class="text-center">Aksi</th>
+                            <th class="text-center bg-light sticky-start" style="width: 100px; position: sticky; left: 0; z-index: 10;">Aksi</th>
+                            <th class="text-center" style="min-width: 50px;">No</th>
+                            
+                            {% for header in headers %}
+                                <th style="min-width: 150px; vertical-align: top;" title="{{ header }}">
+                                    {{ header|truncatechars:50 }} </th>
+                            {% endfor %}
                         </tr>
                     </thead>
                     <tbody>
-                        {% for p in page_obj %}
+                        {% for row in table_rows %}
                         <tr>
-                            <td class="ps-4 fw-bold text-dark">
-                                <div class="d-flex align-items-center">
-                                    <div class="rounded-circle bg-light text-primary d-flex justify-content-center align-items-center me-3" style="width: 40px; height: 40px; font-weight: bold;">
-                                        {{ p.nama|slice:":1" }}
-                                    </div>
-                                    {{ p.nama }}
-                                </div>
+                            <td class="text-center bg-white sticky-start" style="position: sticky; left: 0; z-index: 5;">
+                                <a href="{% url 'edit_peserta' row.0 %}" class="btn btn-sm btn-warning"><i class="fas fa-pen"></i></a>
+                                <a href="{% url 'hapus_peserta' row.0 %}" class="btn btn-sm btn-danger" onclick="return confirm('Hapus?')"><i class="fas fa-trash"></i></a>
                             </td>
-                            <td class="text-muted">{{ p.sekolah }}</td>
-                            <td>
-                                {% if p.kecamatan %}
-                                    <span class="badge bg-info bg-opacity-10 text-info border border-info rounded-pill px-3">{{ p.kecamatan }}</span>
-                                {% else %}
-                                    <span class="text-muted">-</span>
-                                {% endif %}
-                            </td>
-                            <td class="text-center">
-                                <a href="{% url 'edit_peserta' p.id %}" class="btn btn-sm btn-outline-warning mx-1" title="Edit">
-                                    <i class="fas fa-pen"></i>
-                                </i>
-                                <a href="{% url 'hapus_peserta' p.id %}" class="btn btn-sm btn-outline-danger mx-1" title="Hapus" onclick="return confirm('Yakin hapus data ini?')">
-                                    <i class="fas fa-trash"></i>
-                                </a>
-                            </td>
+
+                            <td class="text-center">{{ forloop.counter0|add:page_obj.start_index }}</td>
+
+                            {% for cell in row|slice:"1:" %}
+                                <td>{{ cell|truncatechars:60 }}</td>
+                            {% endfor %}
                         </tr>
                         {% empty %}
-                        <tr>
-                            <td colspan="4" class="text-center py-5 text-muted">
-                                <img src="https://cdn-icons-png.flaticon.com/512/7486/7486754.png" width="80" class="mb-3 opacity-50">
-                                <p class="mb-0">Belum ada data peserta.</p>
-                                <small>Silakan import data Excel terlebih dahulu.</small>
-                            </td>
-                        </tr>
+                        <tr><td colspan="100%" class="text-center py-5">Data Kosong. Import Excel Dulu.</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -156,14 +140,10 @@
                         <a class="page-link rounded-pill px-3 me-1" href="?page={{ page_obj.previous_page_number }}&q={{ query }}&kecamatan={{ kecamatan_selected }}">Prev</a>
                     </li>
                     {% endif %}
-
-                    <li class="page-item disabled">
-                        <span class="page-link border-0">Hal {{ page_obj.number }}</span>
-                    </li>
-
+                    <li class="page-item disabled"><span class="page-link border-0">Hal {{ page_obj.number }}</span></li>
                     {% if page_obj.has_next %}
                     <li class="page-item">
-                        <a class="page-link rounded-pill px-3 ms-1" href="?page={{ page_obj.next_page_number }}&q={{ query }}&kecamatan={{ kecamatan_selected }}">Next</a>
+                        <a class="page-lifnk rounded-pill px-3 ms-1" href="?page={{ page_obj.next_page_number }}&q={{ query }}&kecamatan={{ kecamatan_selected }}">Next</a>
                     </li>
                     {% endif %}
                 </ul>
