@@ -54,7 +54,7 @@ urlpatterns = [
     # HTML Print View (Untuk Laporan 3 & 4)
     path('report/print/<str:tipe>/', views.report_html_view, name='report_print'),
 
-    
+    path('reset-data/', views.hapus_semua_data, name='hapus_semua_data'),
 ]
 
 # --- TAMBAHKAN KODE AJAIB INI ---

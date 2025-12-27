@@ -38,7 +38,7 @@
         }
         .sidebar-header img {
             width: 100px;          /* Lingkaran dibesarkan dikit (tadi 90px) */
-            height: 100px;         
+            height: 100px;        
             object-fit: contain;   
             background-color: white; 
             border-radius: 50%;    
@@ -170,10 +170,31 @@
                 <i class="fas fa-comments text-primary"></i> 5. Kualitatif & Saran
             </a>
 
-            <div class="menu-label">Data Mentah</div>
-            <a href="{% url 'download_excel' %}" class="sidebar-link">
-                <i class="fas fa-file-excel text-success"></i> Download Excel
-            </a>
+            <hr class="sidebar-divider my-3 opacity-25">
+            
+            <div class="sidebar-heading text-white-50 small text-uppercase fw-bold px-3 mb-2">
+                Manajemen Dataset
+            </div>
+            
+            <div class="px-3">
+                <a href="{% url 'download_excel' %}" class="btn btn-success w-100 mb-2 d-flex align-items-center justify-content-center shadow-sm text-decoration-none">
+                    <i class="fas fa-file-excel me-2"></i> Export Excel
+                </a>
+
+                <a href="{% url 'hapus_semua_data' %}" 
+                   class="btn btn-danger w-100 d-flex align-items-center justify-content-center shadow-sm fw-bold text-decoration-none"
+                   style="border: 2px solid #dc3545; transition: 0.3s;"
+                   onclick="return confirm('⚠️ PERINGATAN ! ⚠️\n\nApakah Anda yakin ingin MENGHAPUS SEMUA DATA peserta?\nTindakan ini:\n1. Menghapus seluruh data dari database.\n2. Membuat dashboard menjadi kosong.\n3. TIDAK BISA DIBATALKAN.\n\nKlik OK jika Anda ingin upload data baru.')">
+                    <i class="fas fa-trash-alt me-2"></i> Reset Data
+                </a>
+            </div>
+            
+            <div class="text-center mt-2 px-3">
+                <small class="text-white-50" style="font-size: 0.7rem;">
+                    *Gunakan Reset jika ingin mengganti data baru.
+                </small>
+            </div>
+
         </div>
     </nav>
 
@@ -185,7 +206,11 @@
                 </div>
                 <div>
                     <div class="small fw-bold text-dark">Halo, {{ user.username|title }}</div>
-                    <div class="small text-muted" style="font-size: 0.7rem;">Administrator</div>
+                    {% if user.is_superuser %}
+                        <div class="small text-danger fw-bold" style="font-size: 0.7rem;">Administrator</div>
+                    {% else %}
+                        <div class="small text-muted" style="font-size: 0.7rem;">Staff Karyawan</div>
+                    {% endif %}
                 </div>
                 <div class="ms-2 ps-2 border-start">
                     <form action="{% url 'logout' %}" method="post">

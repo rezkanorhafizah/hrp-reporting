@@ -6,6 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.http import HttpResponse
 from .models import Peserta
+from django.contrib.auth.decorators import login_required, user_passes_test
 
 # Import dari utils.py (Sesuai dengan file utils kakak)
 from .utils import (
@@ -15,6 +16,24 @@ from .utils import (
     generate_trainer_pdf,    # Untuk Laporan 4 Trainer
     generate_qualitative_pdf # Untuk Laporan 5 Kualitatif
 )
+
+def karyawan_only(user):
+    # User boleh masuk HANYA JIKA dia login DAN dia BUKAN superuser
+    return user.is_authenticated and not user.is_superuser
+
+@user_passes_test(karyawan_only, login_url='/admin/')
+def hapus_semua_data(request):
+    # Cek apakah ada data?
+    jumlah = Peserta.objects.count()
+    
+    if jumlah > 0:
+        # PERINTAH MENGHAPUS SEMUA DATA DI TABEL PESERTA
+        Peserta.objects.all().delete()
+        messages.success(request, f'Berhasil menghapus {jumlah} data peserta. Database sekarang bersih.')
+    else:
+        messages.warning(request, 'Database sudah kosong, tidak ada yang dihapus.')
+        
+    return redirect('home') # Kembali ke Dashboard
 
 # ==========================================
 # 1. HELPER: DATA FRAME & CLEANING
@@ -38,7 +57,7 @@ def get_filtered_dataframe(request):
 # ==========================================
 # 2. IMPORT EXCEL (VERSI FINAL & STABIL)
 # ==========================================
-@login_required
+@user_passes_test(karyawan_only, login_url='/admin/')
 def import_excel(request):
     if request.method == 'POST' and request.FILES.get('myfile'):
         myfile = request.FILES['myfile']
@@ -170,7 +189,7 @@ def import_excel(request):
 # ==========================================
 # 3. DASHBOARD
 # ==========================================
-@login_required
+@user_passes_test(karyawan_only, login_url='/admin/')
 def index(request):
     headers = []
     field_keys = []
@@ -205,10 +224,10 @@ def index(request):
     }
     return render(request, 'index.html', context)
 
-@login_required
+@user_passes_test(karyawan_only, login_url='/admin/')
 def edit_peserta(request, id):
     messages.info(request, "Fitur edit sedang disesuaikan."); return redirect('home')
-@login_required
+@user_passes_test(karyawan_only, login_url='/admin/')
 def hapus_peserta(request, id):
     get_object_or_404(Peserta, id=id).delete(); messages.success(request, "Data dihapus."); return redirect('home')
 
@@ -217,7 +236,7 @@ def hapus_peserta(request, id):
 # ==========================================
 
 # --- REPORT 1: DEMOGRAFI (PERBAIKAN) ---
-@login_required
+@user_passes_test(karyawan_only, login_url='/admin/')
 def report_demografi_web(request):
     df = get_filtered_dataframe(request)
     
@@ -262,7 +281,7 @@ def report_demografi_web(request):
     return render(request, 'preview_demografi.html', context)
 
 # --- REPORT 2: MATERI (PERBAIKAN) ---
-@login_required
+@user_passes_test(karyawan_only, login_url='/admin/')
 def report_materi_web(request):
     df = get_filtered_dataframe(request)
     
@@ -291,7 +310,7 @@ def report_materi_web(request):
     return render(request, 'preview_materi.html', context)
 
 # --- REPORT 3: KEPUASAN ---
-@login_required
+@user_passes_test(karyawan_only, login_url='/admin/')
 def report_kepuasan_web(request):
     df = get_filtered_dataframe(request)
     stats = []
@@ -342,7 +361,7 @@ def report_kepuasan_web(request):
     return render(request, 'preview_kepuasan.html', context)
 
 # --- REPORT 4: TRAINER ---
-@login_required
+@user_passes_test(karyawan_only, login_url='/admin/')
 def report_trainer_web(request):
     df = get_filtered_dataframe(request)
     data_trainer = []
@@ -415,7 +434,7 @@ def report_trainer_web(request):
     return render(request, 'preview_trainer.html', context)
 
 # --- REPORT 5: KUALITATIF ---
-@login_required
+@user_passes_test(karyawan_only, login_url='/admin/')
 def report_qualitative_web(request):
     df = get_filtered_dataframe(request)
     topik_list = []
@@ -448,7 +467,7 @@ def report_qualitative_web(request):
     return render(request, 'preview_qualitative.html', context)
 
 # --- FUNGSI TAMBAHAN: PRINT/VIEW HTML (INI YANG TADI HILANG) ---
-@login_required
+@user_passes_test(karyawan_only, login_url='/admin/')
 def report_html_view(request, tipe):
     # Arahkan ke view yang sesuai berdasarkan parameter 'tipe'
     if tipe == 'demografi': return report_demografi_web(request)
