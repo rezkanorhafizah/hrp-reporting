@@ -199,7 +199,7 @@ def index(request):
             field_keys.append(field.name)
 
     data_list = Peserta.objects.all().order_by('-id')
-    query = request.GET.get('q')
+    query = request.GET.get('q', '')
     if query: data_list = data_list.filter(nama__icontains=query)
     kecamatan = request.GET.get('kecamatan')
     if kecamatan: data_list = data_list.filter(kecamatan=kecamatan)
