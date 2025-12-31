@@ -6,6 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.http import HttpResponse
 from .models import Peserta
+from .forms import PesertaForm
 from django.contrib.auth.decorators import login_required, user_passes_test
 
 # Import dari utils.py (Sesuai dengan file utils kakak)
@@ -226,7 +227,29 @@ def index(request):
 
 @user_passes_test(karyawan_only, login_url='/admin/')
 def edit_peserta(request, id):
-    messages.info(request, "Fitur edit sedang disesuaikan."); return redirect('home')
+    # Ambil data peserta, kalau gak ada kasih error 404
+    peserta = get_object_or_404(Peserta, id=id)
+
+    if request.method == "POST":
+        # Masukkan data baru ke dalam form
+        form = PesertaForm(request.POST, instance=peserta)
+        if form.is_valid():
+            form.save()
+            return redirect('home') # Balik ke dashboard kalau sukses
+    else:
+        # Kalau baru buka (GET), tampilkan form berisi data lama
+        form = PesertaForm(instance=peserta)
+
+    # PERBAIKAN DISINI:
+    # 1. Gunakan nama file yang benar: 'form_peserta.html'
+    # 2. Pakai render, JANGAN redirect
+    context = {
+        'form': form, 
+        'peserta': peserta,
+        # (Opsional) Kalau form butuh data tambahan buat dropdown dinamis, pass disini
+    }
+    return render(request, 'form_peserta.html', context)
+
 @user_passes_test(karyawan_only, login_url='/admin/')
 def hapus_peserta(request, id):
     get_object_or_404(Peserta, id=id).delete(); messages.success(request, "Data dihapus."); return redirect('home')

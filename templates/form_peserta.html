@@ -2,127 +2,65 @@
 
 {% block content %}
 <div class="container pb-5">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h4 class="fw-bold text-primary"><i class="fas fa-edit me-2"></i>Edit Data Peserta</h4>
+            <p class="text-muted">Hanya data identitas yang dapat diubah. Data evaluasi bersifat permanen.</p>
+        </div>
+    </div>
+
     <form method="post">
         {% csrf_token %}
         
-        <div class="row g-4 justify-content-center">
-            
-            <div class="col-md-12">
-                <div class="card shadow-sm border-primary h-100">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card shadow-sm border-primary">
                     <div class="card-header bg-primary text-white d-flex align-items-center">
                         <i class="fas fa-user-circle fa-lg me-2"></i>
-                        <h5 class="mb-0">Identitas & Data Utama</h5>
+                        <h5 class="mb-0">Identitas Peserta</h5>
                     </div>
-                    <div class="card-body">
-                        <div class="row g-3">
-                            <div class="col-md-6">
+
+                    <div class="card-body p-4">
+                        <div class="row g-4">
+                            <div class="col-12">
                                 <label class="form-label fw-bold small text-muted">Nama Lengkap</label>
                                 {{ form.nama }}
+                                {% if form.nama.errors %}
+                                    <div class="text-danger small">{{ form.nama.errors }}</div>
+                                {% endif %}
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold small text-muted">Asal Sekolah</label>
+
+                            <div class="col-12">
+                                <label class="form-label fw-bold small text-muted">Asal Sekolah / Instansi</label>
                                 {{ form.sekolah }}
                             </div>
-                            <div class="col-md-6">
+
+                            <div class="col-12">
                                 <label class="form-label fw-bold small text-muted">Kecamatan</label>
                                 {{ form.kecamatan }}
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold small text-muted">Skor Kepuasan Umum</label>
-                                {{ form.skor_kepuasan }}
-                            </div>
-                            <div class="col-12">
-                                <label class="form-label fw-bold small text-muted">Saran & Masukan</label>
-                                {{ form.saran_masukan }}
-                            </div>
-                            <div class="col-12">
-                                <label class="form-label fw-bold small text-muted">Rencana Implementasi</label>
-                                {{ form.rencana_implementasi }}
+                        </div>
+
+                        <div class="alert alert-warning mt-4 d-flex align-items-center" role="alert">
+                            <i class="fas fa-lock me-3 fa-2x"></i>
+                            <div>
+                                <small class="fw-bold">Data Terkunci:</small><br>
+                                <small>Skor Kepuasan, Saran, dan Evaluasi Trainer tidak dapat diubah demi menjaga integritas data survei.</small>
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
 
-            {% if trainer_groups %}
-            <div class="col-12">
-                <div class="card shadow-sm border-info">
-                    <div class="card-header bg-info text-white">
-                        <h5 class="mb-0"><i class="fas fa-chalkboard-teacher me-2"></i>Detail Evaluasi Trainer</h5>
+                    <div class="card-footer bg-light border-top p-4 d-flex justify-content-between align-items-center rounded-bottom">
+                        <a href="{% url 'home' %}" class="btn btn-secondary px-4">
+                            <i class="fas fa-arrow-left me-2"></i>Batal
+                        </a>
+                        <button type="submit" class="btn btn-success px-5 fw-bold shadow-sm">
+                            <i class="fas fa-save me-2"></i>SIMPAN PERUBAHAN
+                        </button>
                     </div>
-                    <div class="card-body bg-light">
-                        <div class="row g-4">
-                            {% for trainer, items in trainer_groups.items %}
-                            <div class="col-md-6">
-                                <div class="card h-100 border-0 shadow-sm">
-                                    <div class="card-header bg-white border-bottom fw-bold text-primary">
-                                        Trainer: {{ trainer }}
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="row g-2">
-                                            {% for item in items %}
-                                            <div class="col-12">
-                                                <div class="input-group input-group-sm">
-                                                    <span class="input-group-text bg-white text-wrap" style="width: 80%; font-size: 0.8rem;">
-                                                        {{ item.label }}
-                                                    </span>
-                                                    <input type="number" name="dynamic_{{ item.key }}" 
-                                                           class="form-control text-center fw-bold text-primary" 
-                                                           value="{{ item.value }}" step="1" min="1" max="5">
-                                                </div>
-                                            </div>
-                                            {% endfor %}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
                     </div>
-                </div>
-            </div>
-            {% endif %}
-
-            {% if general_fields %}
-            <div class="col-12">
-                <div class="card shadow-sm border-secondary">
-                    <div class="card-header bg-secondary text-white">
-                        <h5 class="mb-0"><i class="fas fa-database me-2"></i>Data Tambahan Excel</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row g-3">
-                            {% for item in general_fields %}
-                            <div class="col-md-4">
-                                <div class="form-floating">
-                                    <input type="text" class="form-control" 
-                                           id="gen_{{ item.key }}" 
-                                           name="dynamic_{{ item.key }}" 
-                                           value="{{ item.value }}" 
-                                           placeholder="{{ item.label }}">
-                                    <label for="gen_{{ item.key }}">{{ item.label|truncatechars:30 }}</label>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                </div>
-            </div>
-            {% endif %}
-
-        </div>
-
-        <div class="fixed-bottom bg-white border-top p-3 shadow-lg" style="z-index: 1030;">
-            <div class="container d-flex justify-content-between">
-                <a href="{% url 'home' %}" class="btn btn-secondary px-4">
-                    <i class="fas fa-arrow-left me-2"></i>Batal
-                </a>
-                <button type="submit" class="btn btn-success px-5 fw-bold">
-                    <i class="fas fa-save me-2"></i>SIMPAN PERUBAHAN
-                </button>
             </div>
         </div>
-        <div style="height: 100px;"></div>
-
     </form>
 </div>
 {% endblock %}
