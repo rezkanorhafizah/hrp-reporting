@@ -1,4 +1,15 @@
 from django.db import models
+from django.contrib.auth.models import User
+
+class RiwayatUpload(models.Model):
+    tanggal = models.DateTimeField(auto_now_add=True)
+    nama_file = models.CharField(max_length=255)
+    user_uploader = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    jumlah_data = models.IntegerField(default=0)
+    keterangan = models.TextField(blank=True, null=True) # Opsional, misal: "Data Pelatihan X"
+
+    def __str__(self):
+        return f"{self.nama_file} ({self.tanggal.strftime('%d-%m-%Y')})"
 
 class Peserta(models.Model):
     # --- 1. IDENTITAS ---
@@ -87,5 +98,8 @@ class Peserta(models.Model):
     t2_saran = models.TextField(verbose_name="Apa saja yang perlu ditingkatkan oleh Trainer 2?", null=True, blank=True)
     t2_nilai_akhir = models.TextField(verbose_name="Secara keseluruhan penilaian kinerja Trainer 2", null=True, blank=True)
 
+    riwayat = models.ForeignKey(RiwayatUpload, on_delete=models.CASCADE, null=True, blank=True)
+    
     def __str__(self):
         return self.nama
+    

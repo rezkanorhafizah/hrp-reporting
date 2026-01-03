@@ -15,7 +15,7 @@
 
     <div class="row mb-4">
         <div class="col-md-4">
-            <div class="card p-3 h-100 border-start border-4 border-primary">
+            <div class="card p-3 h-100 border-start border-4 border-primary shadow-sm">
                 <div class="d-flex align-items-center">
                     <div class="bg-primary bg-opacity-10 p-3 rounded-circle text-primary me-3">
                         <i class="fas fa-users fa-2x"></i>
@@ -29,14 +29,14 @@
         </div>
         
         <div class="col-md-4">
-            <div class="card p-3 h-100 border-start border-4 border-warning">
+            <div class="card p-3 h-100 border-start border-4 border-warning shadow-sm">
                 <div class="d-flex align-items-center">
                     <div class="bg-warning bg-opacity-10 p-3 rounded-circle text-warning me-3">
                         <i class="fas fa-map-marker-alt fa-2x"></i>
                     </div>
                     <div>
                         <div class="text-muted small fw-bold text-uppercase">Filter Wilayah</div>
-                        <div class="fw-bold text-dark">
+                        <div class="fw-bold text-dark text-truncate" style="max-width: 200px;">
                             {% if kecamatan_selected %}
                                 {{ kecamatan_selected }}
                             {% else %}
@@ -49,7 +49,7 @@
         </div>
 
         <div class="col-md-4">
-            <div class="card p-3 h-100 border-start border-4 border-success">
+            <div class="card p-3 h-100 border-start border-4 border-success shadow-sm">
                 <div class="d-flex align-items-center">
                     <div class="bg-success bg-opacity-10 p-3 rounded-circle text-success me-3">
                         <i class="fas fa-check-circle fa-2x"></i>
@@ -63,29 +63,58 @@
         </div>
     </div>
 
-    <div class="card mb-4">
-        <div class="card-body">
-            <form method="GET" action="" class="row g-3 align-items-center">
-                <div class="col-md-6">
+    <div class="card mb-4 shadow-sm border-0">
+        <div class="card-body bg-light rounded">
+            <form method="get" class="row g-3 align-items-end">
+                
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold text-muted mb-1"><i class="fas fa-history me-1"></i>Pilih Batch Data</label>
                     <div class="input-group">
-                        <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
-                        <input type="text" name="q" class="form-control border-start-0 ps-0" placeholder="Cari Nama Peserta..." value="{{ query }}">
+                        <span class="input-group-text bg-white text-primary border-end-0">
+                            <i class="fas fa-database"></i>
+                        </span>
+                        <select name="history_id" class="form-select border-start-0 fw-bold text-primary" onchange="this.form.submit()" style="cursor: pointer;">
+                            {% for h in all_histories %}
+                                <option value="{{ h.id }}" {% if active_history.id == h.id %}selected{% endif %}>
+                                    {{ h.tanggal|date:"d M" }} - {{ h.nama_file|truncatechars:18 }} ({{ h.jumlah_data }})
+                                </option>
+                            {% empty %}
+                                <option value="" disabled>Belum ada data</option>
+                            {% endfor %}
+                        </select>
                     </div>
                 </div>
 
-                <div class="col-md-4">
-                    <select name="kecamatan" class="form-select">
-                        <option value="">-- Semua Kecamatan --</option>
-                        {% for k in list_kecamatan %}
-                            <option value="{{ k }}" {% if k == kecamatan_selected %}selected{% endif %}>{{ k }}</option>
-                        {% endfor %}
-                    </select>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-muted mb-1">Cari Nama</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white text-muted border-end-0">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input type="text" name="q" class="form-control border-start-0" 
+                               placeholder="Nama..." value="{{ query }}">
+                    </div>
                 </div>
 
-                <div class="col-md-2 d-grid gap-2 d-md-flex">
-                    <button type="submit" class="btn btn-primary flex-grow-1">Filter</button>
-                    <a href="{% url 'home' %}" class="btn btn-light border" title="Reset"><i class="fas fa-sync-alt"></i></a>
+                <div class="col-md-5">
+                    <label class="form-label small fw-bold text-muted mb-1">Filter Wilayah & Aksi</label>
+                    <div class="d-flex gap-2">
+                        <select name="kecamatan" class="form-select" style="flex: 1;"> <option value="">-- Semua Kec. --</option>
+                            {% for k in list_kecamatan %}
+                                <option value="{{ k }}" {% if kecamatan_selected == k %}selected{% endif %}>{{ k }}</option>
+                            {% endfor %}
+                        </select>
+                        
+                        <button type="submit" class="btn btn-primary px-3" title="Terapkan Filter">
+                            <i class="fas fa-filter me-1"></i>Filter
+                        </button>
+                        
+                        <a href="{% url 'home' %}" class="btn btn-outline-secondary px-3" title="Reset Semua">
+                            <i class="fas fa-sync-alt"></i>
+                        </a>
+                    </div>
                 </div>
+
             </form>
         </div>
     </div>
@@ -114,8 +143,8 @@
                         {% for row in table_rows %}
                         <tr>
                             <td class="text-center bg-white sticky-start" style="position: sticky; left: 0; z-index: 5;">
-                                <a href="{% url 'edit_peserta' row.0 %}" class="btn btn-sm btn-warning"><i class="fas fa-pen"></i></a>
-                                <a href="{% url 'hapus_peserta' row.0 %}" class="btn btn-sm btn-danger" onclick="return confirm('Hapus?')"><i class="fas fa-trash"></i></a>
+                                <a href="{% url 'edit_peserta' row.0 %}" class="btn btn-sm btn-warning" title="Edit Identitas"><i class="fas fa-pen"></i></a>
+                                <a href="{% url 'hapus_peserta' row.0 %}" class="btn btn-sm btn-danger" onclick="return confirm('Yakin ingin menghapus data peserta ini?')" title="Hapus Data"><i class="fas fa-trash"></i></a>
                             </td>
 
                             <td class="text-center">{{ forloop.counter0|add:page_obj.start_index }}</td>
@@ -125,7 +154,12 @@
                             {% endfor %}
                         </tr>
                         {% empty %}
-                        <tr><td colspan="100%" class="text-center py-5">Data Kosong. Import Excel Dulu.</td></tr>
+                        <tr>
+                            <td colspan="100%" class="text-center py-5 text-muted">
+                                <i class="fas fa-folder-open fa-3x mb-3 opacity-25"></i><br>
+                                Data kosong pada batch ini atau tidak ditemukan.
+                            </td>
+                        </tr>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -137,13 +171,13 @@
                 <ul class="pagination justify-content-center mb-0">
                     {% if page_obj.has_previous %}
                     <li class="page-item">
-                        <a class="page-link rounded-pill px-3 me-1" href="?page={{ page_obj.previous_page_number }}&q={{ query }}&kecamatan={{ kecamatan_selected }}">Prev</a>
+                        <a class="page-link rounded-pill px-3 me-1" href="?page={{ page_obj.previous_page_number }}&q={{ query }}&kecamatan={{ kecamatan_selected }}&history_id={{ active_history.id }}">Prev</a>
                     </li>
                     {% endif %}
                     <li class="page-item disabled"><span class="page-link border-0">Hal {{ page_obj.number }}</span></li>
                     {% if page_obj.has_next %}
                     <li class="page-item">
-                        <a class="page-lifnk rounded-pill px-3 ms-1" href="?page={{ page_obj.next_page_number }}&q={{ query }}&kecamatan={{ kecamatan_selected }}">Next</a>
+                        <a class="page-lifnk rounded-pill px-3 ms-1" href="?page={{ page_obj.next_page_number }}&q={{ query }}&kecamatan={{ kecamatan_selected }}&history_id={{ active_history.id }}">Next</a>
                     </li>
                     {% endif %}
                 </ul>

@@ -55,6 +55,13 @@ urlpatterns = [
     path('report/print/<str:tipe>/', views.report_html_view, name='report_print'),
 
     path('reset-data/', views.hapus_semua_data, name='hapus_semua_data'),
+
+    path('users/', views.manage_users, name='manage_users'),
+    path('users/add/', views.add_user, name='add_user'),
+    path('users/delete/<int:user_id>/', views.delete_user, name='delete_user'),
+
+    path('history/', views.manage_history, name='manage_history'),
+    path('history/delete/<int:id>/', views.delete_history, name='delete_history'),
 ]
 
 # --- TAMBAHKAN KODE AJAIB INI ---

@@ -8,6 +8,9 @@ from django.http import HttpResponse
 from .models import Peserta
 from .forms import PesertaForm
 from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.models import User
+from django.contrib.auth.forms import UserCreationForm
+from .models import Peserta, RiwayatUpload
 
 # Import dari utils.py (Sesuai dengan file utils kakak)
 from .utils import (
@@ -17,12 +20,15 @@ from .utils import (
     generate_trainer_pdf,    # Untuk Laporan 4 Trainer
     generate_qualitative_pdf # Untuk Laporan 5 Kualitatif
 )
+def is_admin(user):
+    return user.is_superuser
 
 def karyawan_only(user):
-    # User boleh masuk HANYA JIKA dia login DAN dia BUKAN superuser
-    return user.is_authenticated and not user.is_superuser
+    # IZINKAN JIKA: User login (Authenticated)
+    # Tidak peduli dia Admin atau Staf, yang penting login.
+    return user.is_authenticated
 
-@user_passes_test(karyawan_only, login_url='/admin/')
+@user_passes_test(is_admin, login_url='home')
 def hapus_semua_data(request):
     # Cek apakah ada data?
     jumlah = Peserta.objects.count()
@@ -42,23 +48,36 @@ def hapus_semua_data(request):
 def get_filtered_dataframe(request):
     q = request.GET.get('q', '')
     kecamatan = request.GET.get('kecamatan', '')
+
+    # --- LOGIKA BARU MULAI SINI ---
+    history_id = request.GET.get('history_id') # Cek apakah ada request ID khusus?
+
+    if history_id:
+        # KASUS 1: User memilih history tertentu dari Dropdown
+        data = Peserta.objects.filter(riwayat_id=history_id).order_by('-id')
+    else:
+        # KASUS 2 (DEFAULT): Ambil HANYA Data dari Upload Terakhir
+        last_upload = RiwayatUpload.objects.order_by('-id').first()
+        if last_upload:
+            data = Peserta.objects.filter(riwayat=last_upload).order_by('-id')
+        else:
+            data = Peserta.objects.none()
+    # --- LOGIKA BARU SELESAI ---
     
-    # Ambil data dari ID terbaru
-    data = Peserta.objects.all().order_by('-id')
-    
+    # Filter tambahan (Pencarian & Kecamatan) tetap jalan
     if q: data = data.filter(nama__icontains=q)
     if kecamatan: data = data.filter(kecamatan=kecamatan)
     
     if data.exists():
         df = pd.DataFrame(list(data.values()))
-        df = df.fillna('') # Ganti NaN dengan string kosong
+        df = df.fillna('')
         return df
     return None
 
 # ==========================================
 # 2. IMPORT EXCEL (VERSI FINAL & STABIL)
 # ==========================================
-@user_passes_test(karyawan_only, login_url='/admin/')
+@login_required(login_url='login')
 def import_excel(request):
     if request.method == 'POST' and request.FILES.get('myfile'):
         myfile = request.FILES['myfile']
@@ -67,7 +86,14 @@ def import_excel(request):
             return redirect('import_excel')
 
         try:
-            # A. BACA RAW (Cari Header Manual)
+            # 1. BUAT KEPALA HISTORI (Awalnya 0)
+            history_baru = RiwayatUpload.objects.create(
+                nama_file=myfile.name,
+                user_uploader=request.user,
+                jumlah_data=0 
+            )
+
+            # A. BACA RAW
             df_raw = pd.read_excel(myfile, header=None)
             header_row_index = 0
             for i, row in df_raw.iterrows():
@@ -79,7 +105,7 @@ def import_excel(request):
             # B. RELOAD HEADER BENAR
             df = pd.read_excel(myfile, header=header_row_index)
 
-            # C. BERSIHKAN HEADER & HAPUS DUPLIKAT
+            # C. BERSIHKAN HEADER
             def clean_header(txt):
                 if pd.isna(txt): return f"col_{pd.util.hash_pandas_object(pd.Series([txt])).iloc[0]}"
                 txt = str(txt).lower()
@@ -130,8 +156,10 @@ def import_excel(request):
                         if col == 'nama': nama_raw = row[col]; break
                 if not nama_raw or pd.isna(nama_raw): continue
                 
-                Peserta.objects.filter(nama=nama_raw).delete()
                 obj = Peserta(nama=nama_raw)
+
+                # 2. TEMPELKAN KE HISTORI
+                obj.riwayat = history_baru
 
                 # ISI DATA
                 for col_name in df.columns:
@@ -142,26 +170,18 @@ def import_excel(request):
                     # A. Mapping Umum
                     matched = False
                     for key_map, field_db in field_map.items():
-                        # Tambahkan 'or' di sini untuk menangkap kolom Dinas
                         if key_map in col_key or (key_map == 'sarankepadadinas' and 'dinas' in col_key):
                             setattr(obj, field_db, val); matched = True; break
                     
-                    # B. Mapping Trainer (URUTAN BARU: CEK CONTOH DULUAN!)
+                    # B. Mapping Trainer
                     if not matched and 'trainer' in col_key:
                         is_t1 = '1' in col_key or 'trainer1' in col_key
                         is_t2 = '2' in col_key or 'trainer2' in col_key
                         prefix = 't1_' if is_t1 else ('t2_' if is_t2 else None)
                         
                         if prefix:
-                            # 1. CEK "CONTOH" DULUAN (PENTING! Biar gak ketimpa Relevan)
-                            if 'contoh-contoh' in col_key or 'praktis' in col_key: 
-                                setattr(obj, f'{prefix}contoh', val)
-
-                            # 2. Baru cek RELEVAN
-                            elif 'relevan' in col_key: 
-                                setattr(obj, f'{prefix}relevan', val)
-
-                            # 3. Sisanya (Urutan bebas)
+                            if 'contoh-contoh' in col_key or 'praktis' in col_key: setattr(obj, f'{prefix}contoh', val)
+                            elif 'relevan' in col_key: setattr(obj, f'{prefix}relevan', val)
                             elif 'struktur' in col_key: setattr(obj, f'{prefix}struktur', val)
                             elif 'konsep' in col_key: setattr(obj, f'{prefix}konsep', val)
                             elif 'waktu' in col_key: setattr(obj, f'{prefix}waktu', val)
@@ -181,30 +201,54 @@ def import_excel(request):
 
                 obj.save(); count_sukses += 1
 
-            messages.success(request, f'Sukses import {count_sukses} data!')
+            # 3. UPDATE JUMLAH DATA (SEKARANG SUDAH AMAN)
+            history_baru.jumlah_data = count_sukses
+            history_baru.save()
+            
+            messages.success(request, f'Sukses upload batch baru! {count_sukses} data tersimpan di histori.')
             return redirect('home')
+
         except Exception as e:
+            if 'history_baru' in locals(): history_baru.delete()
             messages.error(request, f'Gagal import: {e}'); return redirect('import_excel')
+            
     return render(request, 'import_excel.html')
 
 # ==========================================
 # 3. DASHBOARD
 # ==========================================
-@user_passes_test(karyawan_only, login_url='/admin/')
+@login_required(login_url='login')
 def index(request):
-    headers = []
-    field_keys = []
-    for field in Peserta._meta.get_fields():
-        if field.name not in ['id', 'peserta'] and field.concrete:
-            headers.append(field.verbose_name)
-            field_keys.append(field.name)
+    # 1. Siapkan Dropdown History
+    all_histories = RiwayatUpload.objects.order_by('-id') # Urutkan dari terbaru
+    
+    # 2. Cek History mana yang sedang aktif (untuk label dropdown)
+    active_history_id = request.GET.get('history_id')
+    if active_history_id:
+        active_history = RiwayatUpload.objects.filter(id=active_history_id).first()
+    else:
+        active_history = all_histories.first() # Default ke yang terbaru
 
-    data_list = Peserta.objects.all().order_by('-id')
+    # 3. Ambil Data (Pakai helper yang baru kita update tadi)
+    # Kita panggil logic manual dikit disini karena butuh QuerySet, bukan DataFrame
+    if active_history:
+        data_list = Peserta.objects.filter(riwayat=active_history).order_by('-id')
+    else:
+        data_list = Peserta.objects.none()
+
+    # Filter Search & Kecamatan (Copas logika lama)
     query = request.GET.get('q', '')
     if query: data_list = data_list.filter(nama__icontains=query)
     kecamatan = request.GET.get('kecamatan')
     if kecamatan: data_list = data_list.filter(kecamatan=kecamatan)
-
+    # --- Pagination & Headers tetap sama ---
+    headers = []
+    field_keys = []
+    for field in Peserta._meta.get_fields():
+        if field.name not in ['id', 'peserta', 'riwayat'] and field.concrete:
+            headers.append(field.verbose_name)
+            field_keys.append(field.name)
+            
     list_kecamatan = Peserta.objects.values_list('kecamatan', flat=True).distinct().order_by('kecamatan')
     list_kecamatan = [k for k in list_kecamatan if k]
 
@@ -220,12 +264,20 @@ def index(request):
         table_rows.append(row_data)
 
     context = {
-        'headers': headers, 'table_rows': table_rows, 'page_obj': page_obj,
-        'query': query, 'kecamatan_selected': kecamatan, 'list_kecamatan': list_kecamatan
+        'headers': headers, 
+        'table_rows': table_rows, 
+        'page_obj': page_obj,
+        'query': query, 
+        'kecamatan_selected': kecamatan, 
+        'list_kecamatan': list_kecamatan,
+        
+        # Kirim Data Baru ke Template
+        'all_histories': all_histories,
+        'active_history': active_history 
     }
     return render(request, 'index.html', context)
 
-@user_passes_test(karyawan_only, login_url='/admin/')
+@login_required(login_url='login')
 def edit_peserta(request, id):
     # Ambil data peserta, kalau gak ada kasih error 404
     peserta = get_object_or_404(Peserta, id=id)
@@ -250,7 +302,7 @@ def edit_peserta(request, id):
     }
     return render(request, 'form_peserta.html', context)
 
-@user_passes_test(karyawan_only, login_url='/admin/')
+@login_required(login_url='login')
 def hapus_peserta(request, id):
     get_object_or_404(Peserta, id=id).delete(); messages.success(request, "Data dihapus."); return redirect('home')
 
@@ -259,7 +311,7 @@ def hapus_peserta(request, id):
 # ==========================================
 
 # --- REPORT 1: DEMOGRAFI (PERBAIKAN) ---
-@user_passes_test(karyawan_only, login_url='/admin/')
+@login_required(login_url='login')
 def report_demografi_web(request):
     df = get_filtered_dataframe(request)
     
@@ -304,7 +356,7 @@ def report_demografi_web(request):
     return render(request, 'preview_demografi.html', context)
 
 # --- REPORT 2: MATERI (PERBAIKAN) ---
-@user_passes_test(karyawan_only, login_url='/admin/')
+@login_required(login_url='login')
 def report_materi_web(request):
     df = get_filtered_dataframe(request)
     
@@ -333,7 +385,7 @@ def report_materi_web(request):
     return render(request, 'preview_materi.html', context)
 
 # --- REPORT 3: KEPUASAN ---
-@user_passes_test(karyawan_only, login_url='/admin/')
+@login_required(login_url='login')
 def report_kepuasan_web(request):
     df = get_filtered_dataframe(request)
     stats = []
@@ -384,7 +436,7 @@ def report_kepuasan_web(request):
     return render(request, 'preview_kepuasan.html', context)
 
 # --- REPORT 4: TRAINER ---
-@user_passes_test(karyawan_only, login_url='/admin/')
+@login_required(login_url='login')
 def report_trainer_web(request):
     df = get_filtered_dataframe(request)
     data_trainer = []
@@ -457,7 +509,7 @@ def report_trainer_web(request):
     return render(request, 'preview_trainer.html', context)
 
 # --- REPORT 5: KUALITATIF ---
-@user_passes_test(karyawan_only, login_url='/admin/')
+@login_required(login_url='login')
 def report_qualitative_web(request):
     df = get_filtered_dataframe(request)
     topik_list = []
@@ -490,7 +542,7 @@ def report_qualitative_web(request):
     return render(request, 'preview_qualitative.html', context)
 
 # --- FUNGSI TAMBAHAN: PRINT/VIEW HTML (INI YANG TADI HILANG) ---
-@user_passes_test(karyawan_only, login_url='/admin/')
+@login_required(login_url='login')
 def report_html_view(request, tipe):
     # Arahkan ke view yang sesuai berdasarkan parameter 'tipe'
     if tipe == 'demografi': return report_demografi_web(request)
@@ -650,3 +702,60 @@ def download_excel(request):
     response['Content-Disposition'] = 'attachment; filename="Data_Peserta.xlsx"'
     if df is not None: df.to_excel(response, index=False)
     return response
+
+# 1. VIEW DAFTAR USER
+@user_passes_test(is_admin) # Cuma Admin yang boleh akses url ini
+def manage_users(request):
+    # Ambil semua user kecuali superuser itu sendiri (opsional, biar gak kehapus sendiri)
+    users = User.objects.filter(is_superuser=False) 
+    context = {'users': users}
+    return render(request, 'manage_users.html', context)
+
+# 2. VIEW TAMBAH USER BARU
+@user_passes_test(is_admin)
+def add_user(request):
+    if request.method == 'POST':
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('manage_users')
+    else:
+        form = UserCreationForm()
+    
+    return render(request, 'form_user.html', {'form': form})
+
+# 3. VIEW HAPUS USER
+@user_passes_test(is_admin)
+def delete_user(request, user_id):
+    user = get_object_or_404(User, id=user_id)
+    user.delete()
+    return redirect('manage_users')
+
+# ==========================================
+# 6. MANAJEMEN HISTORI (ADMIN ONLY)
+# ==========================================
+
+@user_passes_test(is_admin) # Cuma Admin yang boleh
+def manage_history(request):
+    # Ambil data histori, urutkan dari yang terbaru
+    histories = RiwayatUpload.objects.all().order_by('-tanggal')
+    
+    context = {
+        'histories': histories
+    }
+    return render(request, 'manage_history.html', context)
+
+@user_passes_test(is_admin)
+def delete_history(request, id):
+    # Ambil histori berdasarkan ID
+    riwayat = get_object_or_404(RiwayatUpload, id=id)
+    
+    # Simpan info buat pesan sukses
+    nama_file = riwayat.nama_file
+    jumlah = riwayat.peserta_set.count() # Hitung anak-anaknya
+    
+    # HAPUS (Peserta di dalamnya otomatis ikut terhapus karena on_delete=CASCADE)
+    riwayat.delete()
+    
+    messages.success(request, f'Batch upload "{nama_file}" berhasil dihapus beserta {jumlah} data pesertanya.')
+    return redirect('manage_history')
