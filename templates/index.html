@@ -22,7 +22,13 @@
                     </div>
                     <div>
                         <div class="text-muted small fw-bold text-uppercase">Total Peserta</div>
-                        <h2 class="mb-0 fw-bold text-dark">{{ page_obj.paginator.count }}</h2>
+                        <h2 class="mb-0 fw-bold text-dark">
+                            {% if active_history %}
+                                {{ active_history.jumlah_data }}
+                            {% else %}
+                                0
+                            {% endif %}
+                        </h2>
                     </div>
                 </div>
             </div>

@@ -48,23 +48,34 @@ def hapus_semua_data(request):
 def get_filtered_dataframe(request):
     q = request.GET.get('q', '')
     kecamatan = request.GET.get('kecamatan', '')
+    
+    # --- LOGIKA SESSION (INGATAN BROWSER) ---
+    # 1. Cek apakah ada request filter baru dari URL?
+    req_history_id = request.GET.get('history_id')
+    
+    if req_history_id:
+        # Kalau user baru klik filter, simpan ID-nya ke Session
+        request.session['active_batch_id'] = req_history_id
+        history_id = req_history_id
+    else:
+        # Kalau tidak ada di URL, cek apakah ada di Ingatan (Session)?
+        history_id = request.session.get('active_batch_id')
 
-    # --- LOGIKA BARU MULAI SINI ---
-    history_id = request.GET.get('history_id') # Cek apakah ada request ID khusus?
-
-    if history_id:
-        # KASUS 1: User memilih history tertentu dari Dropdown
+    # --- QUERY DATA ---
+    data = Peserta.objects.none() # Default kosong
+    
+    # Cek apakah ID valid dan ada di database?
+    if history_id and RiwayatUpload.objects.filter(id=history_id).exists():
         data = Peserta.objects.filter(riwayat_id=history_id).order_by('-id')
     else:
-        # KASUS 2 (DEFAULT): Ambil HANYA Data dari Upload Terakhir
+        # Fallback: Ambil yang paling baru
         last_upload = RiwayatUpload.objects.order_by('-id').first()
         if last_upload:
+            # Simpan default ke session juga
+            request.session['active_batch_id'] = str(last_upload.id)
             data = Peserta.objects.filter(riwayat=last_upload).order_by('-id')
-        else:
-            data = Peserta.objects.none()
-    # --- LOGIKA BARU SELESAI ---
     
-    # Filter tambahan (Pencarian & Kecamatan) tetap jalan
+    # Filter Tambahan
     if q: data = data.filter(nama__icontains=q)
     if kecamatan: data = data.filter(kecamatan=kecamatan)
     
@@ -219,29 +230,48 @@ def import_excel(request):
 # ==========================================
 @login_required(login_url='login')
 def index(request):
-    # 1. Siapkan Dropdown History
-    all_histories = RiwayatUpload.objects.order_by('-id') # Urutkan dari terbaru
+    # 1. Siapkan Dropdown History (Urutkan dari terbaru)
+    all_histories = RiwayatUpload.objects.order_by('-id')
     
-    # 2. Cek History mana yang sedang aktif (untuk label dropdown)
-    active_history_id = request.GET.get('history_id')
-    if active_history_id:
-        active_history = RiwayatUpload.objects.filter(id=active_history_id).first()
+    # 2. LOGIKA SESSION (INGATAN BROWSER)
+    # Cek apakah ada request filter baru dari URL?
+    req_history_id = request.GET.get('history_id')
+    
+    if req_history_id:
+        # Kalau user baru klik filter, simpan ID-nya ke Session
+        request.session['active_batch_id'] = req_history_id
+        active_id = req_history_id
     else:
-        active_history = all_histories.first() # Default ke yang terbaru
+        # Kalau tidak ada di URL, cek apakah ada di Ingatan (Session)?
+        active_id = request.session.get('active_batch_id')
 
-    # 3. Ambil Data (Pakai helper yang baru kita update tadi)
-    # Kita panggil logic manual dikit disini karena butuh QuerySet, bukan DataFrame
+    # 3. Tentukan Active History Object (Batch mana yang mau ditampilkan?)
+    active_history = None
+    if active_id and RiwayatUpload.objects.filter(id=active_id).exists():
+        active_history = RiwayatUpload.objects.get(id=active_id)
+    else:
+        # Fallback: Ambil yang paling baru (default)
+        active_history = all_histories.first()
+        # Update session biar sinkron
+        if active_history:
+            request.session['active_batch_id'] = str(active_history.id)
+
+    # 4. Ambil Data Peserta Sesuai Batch Aktif
     if active_history:
         data_list = Peserta.objects.filter(riwayat=active_history).order_by('-id')
     else:
         data_list = Peserta.objects.none()
 
-    # Filter Search & Kecamatan (Copas logika lama)
+    # 5. Filter Tambahan (Search & Kecamatan)
     query = request.GET.get('q', '')
-    if query: data_list = data_list.filter(nama__icontains=query)
+    if query:
+        data_list = data_list.filter(nama__icontains=query)
+    
     kecamatan = request.GET.get('kecamatan')
-    if kecamatan: data_list = data_list.filter(kecamatan=kecamatan)
-    # --- Pagination & Headers tetap sama ---
+    if kecamatan:
+        data_list = data_list.filter(kecamatan=kecamatan)
+
+    # 6. Siapkan Headers Tabel
     headers = []
     field_keys = []
     for field in Peserta._meta.get_fields():
@@ -249,12 +279,15 @@ def index(request):
             headers.append(field.verbose_name)
             field_keys.append(field.name)
             
+    # 7. List Kecamatan untuk Dropdown
     list_kecamatan = Peserta.objects.values_list('kecamatan', flat=True).distinct().order_by('kecamatan')
     list_kecamatan = [k for k in list_kecamatan if k]
 
+    # 8. Pagination
     paginator = Paginator(data_list, 10)
     page_obj = paginator.get_page(request.GET.get('page'))
 
+    # 9. Siapkan Baris Tabel
     table_rows = []
     for obj in page_obj:
         row_data = [obj.id]
@@ -263,18 +296,18 @@ def index(request):
             row_data.append(val if val not in [None, ''] else "-")
         table_rows.append(row_data)
 
+    # 10. Bungkus Semua Data ke Context
     context = {
-        'headers': headers, 
-        'table_rows': table_rows, 
-        'page_obj': page_obj,
-        'query': query, 
-        'kecamatan_selected': kecamatan, 
-        'list_kecamatan': list_kecamatan,
-        
-        # Kirim Data Baru ke Template
         'all_histories': all_histories,
-        'active_history': active_history 
+        'active_history': active_history,
+        'headers': headers,
+        'table_rows': table_rows,
+        'page_obj': page_obj,
+        'query': query,
+        'kecamatan_selected': kecamatan,
+        'list_kecamatan': list_kecamatan,
     }
+    
     return render(request, 'index.html', context)
 
 @login_required(login_url='login')
