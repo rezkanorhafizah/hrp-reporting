@@ -24,7 +24,7 @@
                     {% for u in users %}
                     <tr>
                         <td class="ps-4 fw-bold">{{ u.username }}</td>
-                        <td><span class="badge bg-info text-dark">Staf Karyawan</span></td>
+                        <td><span class="badge bg-info text-dark">Staf (Researcher)</span></td>
                         <td>{{ u.date_joined|date:"d M Y" }}</td>
                         <td class="text-end pe-4">
                             <a href="{% url 'delete_user' u.id %}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Yakin mau hapus user ini?');">
