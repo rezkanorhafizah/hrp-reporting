@@ -24,17 +24,32 @@
                     {% for u in users %}
                     <tr>
                         <td class="ps-4 fw-bold">{{ u.username }}</td>
-                        <td><span class="badge bg-info text-dark">Staf (Researcher)</span></td>
+                        
+                        <td>
+                            {% if u.is_superuser %}
+                                <span class="badge bg-danger rounded-pill">
+                                    <i class="fas fa-user-shield me-1"></i> Administrator
+                                </span>
+                            {% else %}
+                                <span class="badge bg-info text-dark rounded-pill">
+                                    <i class="fas fa-user me-1"></i> Staf (Researcher)
+                                </span>
+                            {% endif %}
+                        </td>
                         <td>{{ u.date_joined|date:"d M Y" }}</td>
                         <td class="text-end pe-4">
-                            <a href="{% url 'delete_user' u.id %}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Yakin mau hapus user ini?');">
-                                <i class="fas fa-trash-alt"></i> Hapus
-                            </a>
+                            {% if u.id != request.user.id %}
+                                <a href="{% url 'delete_user' u.id %}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Yakin mau hapus user ini?');">
+                                    <i class="fas fa-trash-alt"></i> Hapus
+                                </a>
+                            {% else %}
+                                <span class="text-muted small">Sedang Login</span>
+                            {% endif %}
                         </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="4" class="text-center py-4 text-muted">Belum ada user staf. Silakan tambah baru.</td>
+                        <td colspan="4" class="text-center py-4 text-muted">Belum ada user tambahan.</td>
                     </tr>
                     {% endfor %}
                 </tbody>

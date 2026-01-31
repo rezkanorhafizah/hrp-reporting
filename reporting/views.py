@@ -11,6 +11,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
 from .models import Peserta, RiwayatUpload
+from .forms import PesertaForm, CustomUserCreationForm
 
 # Import dari utils.py (Sesuai dengan file utils kakak)
 from .utils import (
@@ -739,8 +740,7 @@ def download_excel(request):
 # 1. VIEW DAFTAR USER
 @user_passes_test(is_admin) # Cuma Admin yang boleh akses url ini
 def manage_users(request):
-    # Ambil semua user kecuali superuser itu sendiri (opsional, biar gak kehapus sendiri)
-    users = User.objects.filter(is_superuser=False) 
+    users = User.objects.all().order_by('-date_joined') 
     context = {'users': users}
     return render(request, 'manage_users.html', context)
 
@@ -748,12 +748,27 @@ def manage_users(request):
 @user_passes_test(is_admin)
 def add_user(request):
     if request.method == 'POST':
-        form = UserCreationForm(request.POST)
+        # Pakai form custom yang baru kita buat
+        form = CustomUserCreationForm(request.POST)
         if form.is_valid():
-            form.save()
+            # Jangan save dulu ke database (commit=False)
+            user = form.save(commit=False)
+            
+            # Cek Role yang dipilih
+            role = form.cleaned_data.get('role')
+            
+            if role == 'admin':
+                user.is_staff = True
+                user.is_superuser = True # JADI ADMIN
+            else:
+                user.is_staff = True     # Bisa login
+                user.is_superuser = False # JADI STAF BIASA
+            
+            user.save()
+            messages.success(request, f'User {user.username} berhasil ditambahkan sebagai {role}!')
             return redirect('manage_users')
     else:
-        form = UserCreationForm()
+        form = CustomUserCreationForm()
     
     return render(request, 'form_user.html', {'form': form})
 
